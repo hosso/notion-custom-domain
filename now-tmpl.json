@@ -1,0 +1,9 @@
+{
+  "version": 2,
+  "builds": [{ "src": "src/index.ts", "use": "@now/node" }],
+  "routes": [
+    { "src": "/", "status": 302, "headers": { "Location": "{{start}}" } },
+    { "src": "/[^/]+", "dest": "src/index.ts" },
+    { "src": "/(.*)", "dest": "https://www.notion.so/$1" }
+  ]
+}
