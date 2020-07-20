@@ -8,7 +8,7 @@ app.use(
   proxy('https://www.notion.so', {
     proxyReqOptDecorator: (proxyReqOpts) => {
       if (proxyReqOpts.headers) {
-        proxyReqOpts.headers['accept-encoding'] = '';
+        proxyReqOpts.headers['accept-encoding'] = 'gzip';
       }
       return proxyReqOpts;
     },
