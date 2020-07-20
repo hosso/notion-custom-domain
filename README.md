@@ -5,11 +5,13 @@ Custom Domains for Notion
 ## Getting Started
 
 Install dependencies with specifiying your Notion page:
+
 ```
 START_PAGE=https://www.notion.so/Your-Page-83715d7703ee4b8699b5e659a4712dd8 yarn
 ```
 
 Then deploy to Now:
+
 ```
 yarn deploy:prod
 ```
@@ -18,7 +20,7 @@ Finally, set up a custom domain for the deployment. See [Custom Domains - ZEIT D
 
 ## Development
 
-### Run locally with `now dev`
+### Run locally with `vercel dev`
 
 ```
 yarn develop

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "builds": [{ "src": "src/index.ts", "use": "@now/node" }],
+  "builds": [{ "src": "src/index.ts", "use": "@vercel/node" }],
   "routes": [
     { "src": "/", "status": 302, "headers": { "Location": "{{start}}" } },
     { "src": "/[^/]+", "dest": "src/index.ts" },
