@@ -2,8 +2,8 @@
   "version": 2,
   "builds": [{ "src": "src/index.ts", "use": "@vercel/node" }],
   "routes": [
-    { "src": "/", "status": 302, "headers": { "Location": "{{start}}" } },
-    { "src": "/[^/]+", "dest": "src/index.ts" },
+    { "src": "/[^/.]{1,8}", "status": 302, "headers": { "Location": "/" } },
+    { "src": "/app-[0-f]+\\.js", "dest": "src/index.ts" },
     { "src": "/(.*)", "dest": "https://www.notion.so/$1" }
   ]
 }

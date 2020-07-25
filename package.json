@@ -6,10 +6,9 @@
   "author": "E. Hosso",
   "scripts": {
     "debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
-    "deploy": "vercel",
-    "deploy:prod": "vercel --prod",
+    "deploy": "vercel ${START_PAGE:+-e START_PAGE}",
+    "deploy:prod": "npm run deploy -- --prod",
     "develop": "vercel dev",
-    "postinstall": "ts-node scripts/setup-routes.ts",
     "lint": "eslint --ext .ts .",
     "lint:fix": "eslint --ext .ts . --fix && prettier --write --loglevel silent \"**/*.{json,md}\" && sort-package-json"
   },
