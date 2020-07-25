@@ -6,7 +6,7 @@
   "author": "E. Hosso",
   "scripts": {
     "debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
-    "deploy": "vercel ${START_PAGE:+-e START_PAGE}",
+    "deploy": "vercel ${START_PAGE:+-e START_PAGE} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
     "deploy:prod": "npm run deploy -- --prod",
     "develop": "vercel dev",
     "lint": "eslint --ext .ts .",

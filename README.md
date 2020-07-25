@@ -37,6 +37,16 @@ yarn debug
 
 Then open http://localhost:3000.
 
+## Google Analytics Support
+
+Deploying with `GA_TRACKING_ID` environment variable injects the tracking code into your Notion page:
+
+```
+export START_PAGE=https://www.notion.so/Your-Page-83715d7703ee4b8699b5e659a4712dd8
+export GA_TRACKING_ID=UA-XXXXXXXXX-X
+yarn deploy:prod
+```
+
 ## License
 
 [MIT](LICENSE)
