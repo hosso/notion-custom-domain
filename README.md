@@ -2,6 +2,8 @@
 
 Custom Domains for Notion
 
+[![Notion Custom Domain](https://user-images.githubusercontent.com/19500280/93695277-d99aa400-fb4f-11ea-8e82-5c431110ce19.png)](https://notion-custom-domain.hosso.co)
+
 ## Getting Started
 
 Install dependencies:
