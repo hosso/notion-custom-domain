@@ -53,6 +53,10 @@ app.use(
       }
       return proxyReqOpts;
     },
+    proxyReqPathResolver: (req) => {
+      // Replace '/' with `/${startId}`
+      return req.url.replace(/\/(\?|$)/, `/${startId}$1`);
+    },
     userResHeaderDecorator: (headers) => {
       const csp = headers['content-security-policy'] as string;
       if (csp) {
