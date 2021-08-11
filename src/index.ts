@@ -1,18 +1,20 @@
 import express from 'express';
 import proxy from 'express-http-proxy';
+import { URL } from 'url';
 
-const START_PAGE =
-  process.env.START_PAGE ||
-  'https://www.notion.so/Notion-Official-83715d7703ee4b8699b5e659a4712dd8';
-const GA_TRACKING_ID = process.env.GA_TRACKING_ID;
+const {
+  PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
+  GA_TRACKING_ID,
+} = process.env;
 
-const startId = START_PAGE.replace(/^.*-/, '');
+const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
+const pageId = pagePath.match(/[^-]*$/);
 
 // Map start page path to "/"
 const ncd = `var ncd={
-  href:function(){return location.href.replace(/\\/(?=\\?|$)/,"/${startId}")},
-  pushState:function(a,b,url){history.pushState(a,b,url.replace(/\\/[^/]*${startId}(?=\\?|$)/,"/"));pageview();},
-  replaceState:function(a,b,url){history.replaceState(a,b,url.replace(/\\/[^/]*${startId}(?=\\?|$)/,"/"));pageview();}
+  href:function(){return location.href.replace(location.origin,"${pageDomain}").replace(/\\/(?=\\?|$)/,"/${pageId}")},
+  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/\\/[^/]*${pageId}(?=\\?|$)/,"/"));pageview();},
+  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/\\/[^/]*${pageId}(?=\\?|$)/,"/"));pageview();}
 };`.replace(/\n */gm, '');
 
 const ga = GA_TRACKING_ID
@@ -46,7 +48,7 @@ const pageview = `<script>
 const app = express();
 
 app.use(
-  proxy('https://www.notion.so', {
+  proxy(pageDomain, {
     proxyReqOptDecorator: (proxyReqOpts) => {
       if (proxyReqOpts.headers) {
         proxyReqOpts.headers['accept-encoding'] = 'gzip';
@@ -54,8 +56,8 @@ app.use(
       return proxyReqOpts;
     },
     proxyReqPathResolver: (req) => {
-      // Replace '/' with `/${startId}`
-      return req.url.replace(/\/(\?|$)/, `/${startId}$1`);
+      // Replace '/' with `/${pageId}`
+      return req.url.replace(/\/(\?|$)/, `/${pageId}$1`);
     },
     userResHeaderDecorator: (headers) => {
       const csp = headers['content-security-policy'] as string;
@@ -69,15 +71,11 @@ app.use(
     },
     userResDecorator: (_proxyRes, proxyResData, userReq) => {
       if (/\/app-.*\.js/.test(userReq.url)) {
-        const proto = userReq.get('x-forwarded-proto') || 'http';
-        const host = userReq.get('x-forwarded-host') || userReq.get('host');
-
         return proxyResData
           .toString()
           .replace(/^/, ncd)
           .replace(/window.location.href(?=[^=]|={2,})/g, 'ncd.href()') // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
-          .replace(/window.history.(pushState|replaceState)/g, 'ncd.$1')
-          .replace(/https:\/\/(www.)?notion.so/g, `${proto}://${host}`);
+          .replace(/window.history.(pushState|replaceState)/g, 'ncd.$1');
       } else {
         // Assume HTML
         return proxyResData

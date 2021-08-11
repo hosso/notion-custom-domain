@@ -1,13 +1,13 @@
 {
   "name": "notion-custom-domain",
   "version": "0.1.0",
-  "description": "Custom Domains for Notion",
+  "description": "Custom domains for your public Notion pages",
   "license": "MIT",
   "author": "E. Hosso",
   "scripts": {
     "postinstall": "node node_modules/husky/husky.js install",
     "develop": "vercel dev",
-    "deploy": "vercel ${START_PAGE:+-e START_PAGE} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
+    "deploy": "vercel ${PAGE_URL:+-e PAGE_URL} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
     "deploy:prod": "yarn run deploy --prod",
     "#debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
     "debug": "node --nolazy --inspect -r ts-node/register src/index.ts",
