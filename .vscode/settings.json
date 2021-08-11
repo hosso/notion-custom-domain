@@ -1,3 +1,5 @@
 {
-  "debug.node.autoAttach": "on"
+  "debug.javascript.autoAttachFilter": "onlyWithFlag",
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.formatOnSave": true
 }

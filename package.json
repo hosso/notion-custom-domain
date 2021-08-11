@@ -5,12 +5,14 @@
   "license": "MIT",
   "author": "E. Hosso",
   "scripts": {
-    "debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
-    "deploy": "vercel ${START_PAGE:+-e START_PAGE} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
-    "deploy:prod": "npm run deploy -- --prod",
+    "postinstall": "node node_modules/husky/husky.js install",
     "develop": "vercel dev",
+    "deploy": "vercel ${START_PAGE:+-e START_PAGE} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
+    "deploy:prod": "yarn run deploy --prod",
+    "#debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
+    "debug": "node --nolazy --inspect -r ts-node/register src/index.ts",
     "lint": "eslint --ext .ts .",
-    "lint:fix": "eslint --ext .ts . --fix && prettier --write --loglevel silent \"**/*.{json,md}\" && sort-package-json"
+    "fix": "eslint --ext .ts . --fix && prettier --write --loglevel silent \"**/*.{json,md}\" && sort-package-json"
   },
   "husky": {
     "hooks": {
@@ -18,11 +20,11 @@
     }
   },
   "lint-staged": {
-    "*.{json,md}": [
-      "prettier --write"
-    ],
     "*.ts": [
       "eslint --fix"
+    ],
+    "*.{json,md}": [
+      "prettier --write"
     ],
     "package.json": [
       "sort-package-json"
@@ -39,7 +41,6 @@
     "@typescript-eslint/parser": "^4.29.1",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-prettier": "^3.4.0",
     "husky": "^3",
     "lint-staged": "^11.1.2",
     "prettier": "^2.3.2",
