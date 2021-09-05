@@ -10,11 +10,14 @@ const {
 const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
 const pageId = pagePath.match(/[^-]*$/);
 
-// Map start page path to "/"
+// Map start page path to "/". Replacing URL for example:
+// - https://my.notion.site/0123456789abcdef0123456789abcdef -> https://mydomain.com/
+// - /My-Page-0123456789abcdef0123456789abcdef -> /
+// - /my/My-Page-0123456789abcdef0123456789abcdef -> /
 const ncd = `var ncd={
   href:function(){return location.href.replace(location.origin,"${pageDomain}").replace(/\\/(?=\\?|$)/,"/${pageId}")},
-  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/\\/[^/]*${pageId}(?=\\?|$)/,"/"));pageview();},
-  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/\\/[^/]*${pageId}(?=\\?|$)/,"/"));pageview();}
+  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(?<=^|[^/])\\/.*${pageId}(?=\\?|$)/,"/"));pageview();},
+  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(?<=^|[^/])\\/.*${pageId}(?=\\?|$)/,"/"));pageview();}
 };`.replace(/\n */gm, '');
 
 const ga = GA_TRACKING_ID
