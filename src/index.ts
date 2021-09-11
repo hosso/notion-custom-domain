@@ -16,8 +16,8 @@ const pageId = pagePath.match(/[^-]*$/);
 // - /my/My-Page-0123456789abcdef0123456789abcdef -> /
 const ncd = `var ncd={
   href:function(){return location.href.replace(location.origin,"${pageDomain}").replace(/\\/(?=\\?|$)/,"/${pageId}")},
-  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(?<=^|[^/])\\/.*${pageId}(?=\\?|$)/,"/"));pageview();},
-  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(?<=^|[^/])\\/.*${pageId}(?=\\?|$)/,"/"));pageview();}
+  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(?:^|[^/])\\/.*${pageId}(?=\\?|$)/,"$1/"));pageview();},
+  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(?:^|[^/])\\/.*${pageId}(?=\\?|$)/,"$1/"));pageview();}
 };`.replace(/\n */gm, '');
 
 const ga = GA_TRACKING_ID
