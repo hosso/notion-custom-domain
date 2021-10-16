@@ -62,7 +62,31 @@ app.use(
       // Replace '/' with `/${pageId}`
       return req.url.replace(/\/(\?|$)/, `/${pageId}$1`);
     },
-    userResHeaderDecorator: (headers) => {
+    userResHeaderDecorator: (headers, userReq) => {
+      if (headers['location']) {
+        // "https://www.notion.so/syncCookies?backUrl=https%3A%2F%2Fmy.notion.site%2F0123456789abcdef0123456789abcdef%3Fv%3D1"
+        // -> "https://mydomain.com/syncCookies?backUrl=https%3A%2F%2Fmydomain.com%2F0123456789abcdef0123456789abcdef%3Fv%3D1"
+        headers['location'] = headers['location'].replace(
+          /(https?)(:\/\/|%3A%2F%2F)[^.]+\.notion\.(so|site)/g,
+          `${userReq.headers['x-forwarded-proto']}$2${userReq.headers['x-forwarded-host']}`,
+        );
+      }
+
+      if (headers['set-cookie']) {
+        // "Domain=notion.site" -> "Domain=mydomain.com"
+        // "; Domain=notion.site;' -> '; Domain=mydomain.com;"
+        const domain = (userReq.headers['x-forwarded-host'] as string).replace(
+          /:.*/,
+          '',
+        );
+        headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
+          cookie.replace(
+            /((?:^|; )Domain=)((?:[^.]+\.)?notion\.(?:so|site))(;|$)/g,
+            `$1${domain}$3`,
+          ),
+        );
+      }
+
       const csp = headers['content-security-policy'] as string;
       if (csp) {
         headers['content-security-policy'] = csp.replace(
@@ -70,6 +94,7 @@ app.use(
           '$& https://www.googletagmanager.com https://www.google-analytics.com',
         );
       }
+
       return headers;
     },
     userResDecorator: (_proxyRes, proxyResData, userReq) => {
