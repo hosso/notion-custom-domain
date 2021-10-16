@@ -3,9 +3,10 @@
     "target": "es2018",
     "module": "commonjs",
     "lib": ["es2018"],
+    "types": ["cypress"],
     "strict": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*.ts", "cypress/**/*.ts"]
 }

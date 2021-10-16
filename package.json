@@ -6,13 +6,16 @@
   "author": "E. Hosso",
   "scripts": {
     "#debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
+    "cy:open": "cypress open",
+    "cy:run": "cypress run",
     "debug": "node --nolazy --inspect -r ts-node/register src/index.ts",
     "deploy": "vercel ${PAGE_URL:+-e PAGE_URL} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
     "deploy:prod": "yarn run deploy --prod",
     "develop": "vercel dev",
-    "fix": "eslint --ext .ts . --fix && prettier --write --loglevel silent \"**/*.{json,md}\" && sort-package-json",
+    "fix": "eslint --ext .ts,.js . --fix && prettier --write --loglevel silent \"**/*.{json,md}\" && sort-package-json",
     "postinstall": "node node_modules/husky/husky.js install",
-    "lint": "eslint --ext .ts ."
+    "lint": "eslint --ext .ts,.js .",
+    "start": "vercel dev"
   },
   "husky": {
     "hooks": {
@@ -20,7 +23,7 @@
     }
   },
   "lint-staged": {
-    "*.ts": [
+    "*.{ts,js}": [
       "eslint --fix"
     ],
     "*.{json,md}": [
@@ -39,8 +42,10 @@
     "@types/express-http-proxy": "^1.6.3",
     "@typescript-eslint/eslint-plugin": "^4.31.0",
     "@typescript-eslint/parser": "^4.31.0",
+    "cypress": "^8.6.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-cypress": "^2.12.1",
     "husky": "3",
     "lint-staged": "^11.1.2",
     "prettier": "^2.4.0",

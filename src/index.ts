@@ -81,10 +81,15 @@ app.use(
         );
         headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
           cookie.replace(
-            /((?:^|; )Domain=)((?:[^.]+\.)?notion\.(?:so|site))(;|$)/g,
-            `$1${domain}$3`,
+            /((?:^|; )Domain=)(?:[^.]+\.)?notion\.(?:so|site)(;|$)/g,
+            `$1${domain}$2`,
           ),
         );
+        if (userReq.headers['x-forwarded-proto'] === 'http') {
+          headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
+            cookie.replace(/(?:^|; )Secure(?:;|$)/g, '$1'),
+          );
+        }
       }
 
       const csp = headers['content-security-policy'] as string;

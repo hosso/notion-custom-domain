@@ -3,6 +3,12 @@
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
-    "prettier"
-  ]
+    "prettier",
+    "plugin:cypress/recommended"
+  ],
+  "env": {
+    "browser": true,
+    "es6": true,
+    "node": true
+  }
 }
