@@ -90,7 +90,7 @@ app.use(
       const csp = headers['content-security-policy'] as string;
       if (csp) {
         headers['content-security-policy'] = csp.replace(
-          /(?=script-src )[^;]*/,
+          /(?=(script-src|connect-src) )[^;]*/g,
           '$& https://www.googletagmanager.com https://www.google-analytics.com',
         );
       }
