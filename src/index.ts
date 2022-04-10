@@ -98,7 +98,7 @@ app.use(
       return headers;
     },
     userResDecorator: (_proxyRes, proxyResData, userReq) => {
-      if (/\/app-.*\.js/.test(userReq.url)) {
+      if (/^\/app-.*\.js$/.test(userReq.url)) {
         return proxyResData
           .toString()
           .replace(/^/, ncd)
