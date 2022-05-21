@@ -1,6 +1,7 @@
 import express from 'express';
 import proxy from 'express-http-proxy';
 import { URL } from 'url';
+import path from 'path';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
@@ -8,7 +9,7 @@ const {
 } = process.env;
 
 const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
-const pageId = pagePath.match(/[^-]*$/);
+const pageId = path.basename(pagePath).match(/[^-]*$/);
 
 // Map start page path to "/". Replacing URL for example:
 // - https://my.notion.site/0123456789abcdef0123456789abcdef -> https://mydomain.com/
