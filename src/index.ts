@@ -105,7 +105,7 @@ app.use(
           .replace(/^/, ncd)
           .replace(/window.location.href(?=[^=]|={2,})/g, 'ncd.href()') // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
           .replace(/window.history.(pushState|replaceState)/g, 'ncd.$1');
-      } else if (/^\/image\//.test(userReq.url)) {
+      } else if (/^\/image[s]?\//.test(userReq.url)) {
         return proxyResData;
       } else {
         // Assume HTML
