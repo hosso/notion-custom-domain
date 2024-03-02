@@ -122,7 +122,7 @@ app.use(
   }),
 );
 
-if (!process.env.VERCEL_REGION) {
+if (!process.env.VERCEL_REGION && !process.env.NOW_REGION) {
   const port = process.env.PORT || 3000;
   app.listen(port, () =>
     console.log(`Server running at http://localhost:${port}`),

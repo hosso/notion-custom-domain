@@ -4,20 +4,19 @@
   "description": "Custom domains for your public Notion pages",
   "license": "MIT",
   "author": "E. Hosso",
+  "type": "module",
   "scripts": {
-    "#debug": "node --nolazy --inspect-brk -r ts-node/register src/index.ts",
-    "debug": "node --nolazy --inspect -r ts-node/register src/index.ts",
+    "#debug": "ts-node-dev --inspect --respawn src/index.ts",
+    "#dev": "ts-node-dev --respawn src/index.ts",
+    "debug": "nodemon --exec 'node --no-warnings=ExperimentalWarning --loader ts-node/esm --inspect' src/index.ts",
     "deploy": "vercel ${PAGE_URL:+-e PAGE_URL} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
     "deploy:prod": "yarn run deploy --prod",
-    "develop": "vercel dev",
-    "fix": "eslint --ext .ts . --fix && prettier --write --loglevel silent \"**/*.{json,md}\" && sort-package-json",
-    "postinstall": "node node_modules/husky/husky.js install",
-    "lint": "eslint --ext .ts ."
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
+    "dev": "nodemon --exec 'node --no-warnings=ExperimentalWarning --loader ts-node/esm' src/index.ts",
+    "fix": "eslint --ext .ts . --fix && prettier --write --log-level silent \"**/*.{json,md}\" && sort-package-json",
+    "format-check": "eslint --ext .ts . && prettier --check --log-level silent \"**/*.{json,md}\" && tsc --noEmit",
+    "prepare": "husky",
+    "vc:dev": "vercel dev",
+    "vc:dev:debug": "vercel dev --debug"
   },
   "lint-staged": {
     "*.ts": [
@@ -31,22 +30,26 @@
     ]
   },
   "dependencies": {
-    "express": "^4.17.1",
-    "express-http-proxy": "^1.6.2"
+    "express": "^4.18.2",
+    "express-http-proxy": "^2.0.0"
   },
   "devDependencies": {
-    "@types/express": "^4.17.13",
-    "@types/express-http-proxy": "^1.6.3",
-    "@typescript-eslint/eslint-plugin": "^4.31.0",
-    "@typescript-eslint/parser": "^4.31.0",
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.3.0",
-    "husky": "3",
-    "lint-staged": "^11.1.2",
-    "prettier": "^2.4.0",
-    "sort-package-json": "^1.51.0",
-    "ts-node": "^10.2.1",
-    "typescript": "^4.4.3",
-    "vercel": "^23.1.2"
+    "@types/express-http-proxy": "^1.6.6",
+    "@typescript-eslint/eslint-plugin": "^7.0.2",
+    "@typescript-eslint/parser": "^7.0.2",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.11",
+    "lint-staged": "^15.2.2",
+    "nodemon": "^3.1.0",
+    "prettier": "^3.2.5",
+    "sort-package-json": "^2.8.0",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.3.3",
+    "vercel": "^33.5.3"
+  },
+  "engines": {
+    "node": ">= 18"
   }
 }
