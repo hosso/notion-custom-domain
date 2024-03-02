@@ -32,11 +32,11 @@ Finally, set up a custom domain for the deployment on the Vercel Dashboard. See 
 
 ## Development
 
-### Run locally with `vercel dev`
+### Run locally
 
 ```
 PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-yarn develop
+yarn dev
 ```
 
 Then open http://localhost:3000.
@@ -44,6 +44,7 @@ Then open http://localhost:3000.
 ### Debug with Node Inspector
 
 ```
+PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
 yarn debug
 ```
 
@@ -62,7 +63,7 @@ yarn deploy:prod
 ## Using Environment Variables on the Vercel Dashboard
 
 You can use environment variables on the Vercel Dashboard. In this case, you can simply run
-`yarn develop`, `yarn deploy` or `yarn deploy:prod` without setting environment variables.
+`vercel env pull`, `vercel dev`, `vercel deploy` or `vercel deploy --prod` without setting environment variables.
 ![](https://user-images.githubusercontent.com/19500280/169643081-9e5e1f72-dacb-4892-b9d6-f67869c2a34d.png)
 
 ## License
