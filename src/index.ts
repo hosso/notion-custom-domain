@@ -59,7 +59,7 @@ app.use(
         // "; Domain=notion.site;' -> '; Domain=mydomain.com;"
         headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
           cookie.replace(
-            /((?:^|; )Domain=)((?:[^.]+\.)?notion\.(?:so|site))(;|$)/g,
+            /((?:^|; )Domain=)((?:[^.]+\.)?notion\.site)(;|$)/gi,
             `$1${userReq.hostname}$3`,
           ),
         );
