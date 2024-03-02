@@ -5,7 +5,7 @@ import path from 'path';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
-  GA_TRACKING_ID,
+  GA_MEASUREMENT_ID,
 } = process.env;
 
 const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
@@ -17,42 +17,27 @@ const pageId = path.basename(pagePath).match(/[^-]*$/);
 // - /my/My-Page-0123456789abcdef0123456789abcdef -> /
 const ncd = `var ncd={
   href:function(){return location.href.replace(location.origin,"${pageDomain}").replace(/\\/(?=\\?|$)/,"/${pageId}")},
-  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));pageview();},
-  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));pageview();}
+  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));},
+  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));}
 };`.replace(/\n */gm, '');
 
-const ga = GA_TRACKING_ID
-  ? `<!-- Global site tag (gtag.js) - Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_TRACKING_ID}"></script>
+const ga = GA_MEASUREMENT_ID
+  ? `<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
 
-  gtag('config', '${GA_TRACKING_ID}');
+  gtag('config', '${GA_MEASUREMENT_ID}');
 </script>`
   : '';
 
-const pageview = `<style> 
+const customStyle = `<style> 
   .notion-topbar > div > div:nth-last-child(1), .notion-topbar > div > div:nth-last-child(2) { 
     display:none !important; 
   } 
-</style>
-<script>
-  window.pagePath = location.pathname + location.search + location.hash;
-  function pageview(){
-    var pagePath = location.pathname + location.search + location.hash;
-    if (pagePath !== window.pagePath) {${
-      GA_TRACKING_ID
-        ? `
-      gtag('config', '${GA_TRACKING_ID}', {'page_path': pagePath});`
-        : ''
-    }
-      window.pagePath = pagePath;
-    }
-  }
-  window.addEventListener('popstate', pageview);
-</script>`;
+</style>`;
 
 const app = express();
 
@@ -103,7 +88,8 @@ app.use(
         // Assume HTML
         return proxyResData
           .toString()
-          .replace('</body>', `${ga}${pageview}</body>`);
+          .replace('</body>', `${ga}</body>`)
+          .replace('</head>', `${customStyle}</head>`);
       }
     },
   }),

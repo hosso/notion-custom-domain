@@ -9,7 +9,7 @@
     "#debug": "ts-node-dev --inspect --respawn src/index.ts",
     "#dev": "ts-node-dev --respawn src/index.ts",
     "debug": "nodemon --exec 'node --no-warnings=ExperimentalWarning --loader ts-node/esm --inspect' src/index.ts",
-    "deploy": "vercel ${PAGE_URL:+-e PAGE_URL} ${GA_TRACKING_ID:+-e GA_TRACKING_ID}",
+    "deploy": "vercel ${PAGE_URL:+-e PAGE_URL} ${GA_MEASUREMENT_ID:+-e GA_MEASUREMENT_ID}",
     "deploy:prod": "yarn run deploy --prod",
     "dev": "nodemon --exec 'node --no-warnings=ExperimentalWarning --loader ts-node/esm' src/index.ts",
     "fix": "eslint --ext .ts . --fix && prettier --write --log-level silent \"**/*.{json,md}\" && sort-package-json",

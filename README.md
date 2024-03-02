@@ -52,11 +52,11 @@ Then open http://localhost:3000.
 
 ## Google Analytics Support
 
-Deploying with `GA_TRACKING_ID` environment variable injects the tracking code into your public Notion page:
+Deploying with `GA_MEASUREMENT_ID` environment variable injects the tracking code into your public Notion page:
 
 ```
 PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-GA_TRACKING_ID=UA-XXXXXXXXX-X \
+GA_MEASUREMENT_ID=G-XXXXXXXXXX \
 yarn deploy:prod
 ```
 
