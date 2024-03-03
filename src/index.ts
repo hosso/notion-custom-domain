@@ -43,21 +43,16 @@ const app = express();
 
 app.use(
   proxy(pageDomain, {
-    proxyReqOptDecorator: (proxyReqOpts) => {
-      if (proxyReqOpts.headers) {
-        proxyReqOpts.headers['accept-encoding'] = 'gzip';
-      }
-      return proxyReqOpts;
-    },
     proxyReqPathResolver: (req) => {
       // Replace '/' with `/${pageId}`
       return req.url.replace(/\/(\?|$)/, `/${pageId}$1`);
     },
     userResHeaderDecorator: (headers, userReq) => {
-      if (headers['set-cookie']) {
+      const cookies = headers['set-cookie'];
+      if (cookies) {
         // "Domain=notion.site" -> "Domain=mydomain.com"
         // "; Domain=notion.site;' -> '; Domain=mydomain.com;"
-        headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
+        headers['set-cookie'] = cookies.map((cookie) =>
           cookie.replace(
             /((?:^|; )Domain=)((?:[^.]+\.)?notion\.site)(;|$)/gi,
             `$1${userReq.hostname}$3`,
@@ -80,8 +75,8 @@ app.use(
         return proxyResData
           .toString()
           .replace(/^/, ncd)
-          .replace(/window.location.href(?=[^=]|={2,})/g, 'ncd.href()') // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
-          .replace(/window.history.(pushState|replaceState)/g, 'ncd.$1');
+          .replace(/window\.location\.href(?=[^=]|={2,})/g, 'ncd.href()') // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
+          .replace(/window\.history\.(pushState|replaceState)/g, 'ncd.$1');
       } else if (/^\/image[s]?\//.test(userReq.url)) {
         return proxyResData;
       } else {
