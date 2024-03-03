@@ -1,8 +1,8 @@
 {
   "version": 2,
   "builds": [{ "src": "src/index.ts", "use": "@vercel/node" }],
-  "routes": [
-    { "src": "/[^/.]{1,8}", "status": 302, "headers": { "Location": "/" } },
-    { "src": "/(.*)", "dest": "src/index.ts" }
-  ]
+  "redirects": [
+    { "source": "/[^/.]{1,8}", "destination": "/", "permanent": false }
+  ],
+  "rewrites": [{ "source": "/(.*)", "destination": "/src/index.ts" }]
 }
