@@ -5,7 +5,7 @@ import path from 'path';
 
 const {
   // PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
-  PAGE_URL = 'https://brickspress.notion.site/1f4cb3b29dce4b4b8567ade3465556ad',
+  PAGE_URL = 'https://bittersweet-sturgeon-42d.notion.site/Notion-Custom-Domain-67168054ffe045fc82892054d3b7f7d4',
   GA_TRACKING_ID,
 } = process.env;
 
@@ -79,29 +79,44 @@ app.use(
         );
       }
 
+      // if (headers['set-cookie']) {
+      //   // "Domain=notion.site" -> "Domain=mydomain.com"
+      //   // "; Domain=notion.site;' -> '; Domain=mydomain.com;"
+        
+      //   // const domain = (userReq.headers['x-forwarded-host'] as string).replace(
+      //   //   /:.*/,
+      //   //   '',
+      //   // );
+
+      //   let domain = '';
+
+      //   if (userReq.headers['x-forwarded-host']) {
+      //     domain = (userReq.headers['x-forwarded-host'] as string).replace(
+      //       /:.*/,
+      //       '',
+      //     );
+      //   } else {
+      //     domain = (userReq.headers.host as string).replace(
+      //       /:.*/,
+      //       '',
+      //     );
+      //   }
+        
+      //   headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
+      //     cookie.replace(
+      //       /((?:^|; )Domain=)((?:[^.]+\.)?notion\.(?:so|site))(;|$)/g,
+      //       `$1${domain}$3`,
+      //     ),
+      //   );
+      // }
+
       if (headers['set-cookie']) {
         // "Domain=notion.site" -> "Domain=mydomain.com"
         // "; Domain=notion.site;' -> '; Domain=mydomain.com;"
-        
-        // const domain = (userReq.headers['x-forwarded-host'] as string).replace(
-        //   /:.*/,
-        //   '',
-        // );
-
-        let domain = '';
-
-        if (userReq.headers['x-forwarded-host']) {
-          domain = (userReq.headers['x-forwarded-host'] as string).replace(
-            /:.*/,
-            '',
-          );
-        } else {
-          domain = (userReq.headers.host as string).replace(
-            /:.*/,
-            '',
-          );
-        }
-        
+        const domain = (userReq.headers['x-forwarded-host'] as string).replace(
+          /:.*/,
+          '',
+        );
         headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
           cookie.replace(
             /((?:^|; )Domain=)((?:[^.]+\.)?notion\.(?:so|site))(;|$)/g,
