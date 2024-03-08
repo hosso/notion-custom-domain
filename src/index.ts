@@ -5,7 +5,7 @@ import path from 'path';
 
 const {
   // PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
-  PAGE_URL = 'https://bittersweet-sturgeon-42d.notion.site/Notion-Custom-Domain-67168054ffe045fc82892054d3b7f7d4',
+  PAGE_URL = 'https://brickspress.notion.site/BricksPress-68ac5f4bdf014f04a13bc9041eb7b28d',
   GA_TRACKING_ID,
 } = process.env;
 
