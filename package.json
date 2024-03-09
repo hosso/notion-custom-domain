@@ -1,7 +1,7 @@
 {
   "name": "notion-custom-domain",
   "version": "0.1.0",
-  "description": "Custom domains for your public Notion pages",
+  "description": "Custom domains for your Notion pages",
   "license": "MIT",
   "author": "E. Hosso",
   "type": "module",

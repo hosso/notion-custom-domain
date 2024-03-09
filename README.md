@@ -1,6 +1,6 @@
 # Notion Custom Domain
 
-Custom domains for your public Notion pages. You can publish your page to your own domain instead of `notion.site`.
+Custom domains for your Notion pages. You can publish your page to your own domain instead of `notion.site`.
 
 [![Notion Custom Domain](https://user-images.githubusercontent.com/19500280/93695277-d99aa400-fb4f-11ea-8e82-5c431110ce19.png)](https://notion-custom-domain.hosso.co)
 
@@ -64,7 +64,7 @@ yarn deploy:prod
 
 You can use environment variables on the Vercel Dashboard. In this case, you can simply run
 `vercel env pull`, `vercel dev`, `vercel deploy` or `vercel deploy --prod` without setting environment variables.
-![](https://user-images.githubusercontent.com/19500280/169643081-9e5e1f72-dacb-4892-b9d6-f67869c2a34d.png)
+![](https://github.com/hosso/notion-custom-domain/assets/19500280/e234a2eb-8ba7-4be0-a1dd-fa58ce0327ab)
 
 ## License
 
