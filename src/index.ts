@@ -33,42 +33,43 @@ const ga = GA_MEASUREMENT_ID
 </script>`
   : '';
 
-const customScript = `<script>
-  (function (){
-    const replacedUrl = (url) => {
-      const [,domain] = /^https?:\\/\\/([^\\/]*)/.exec(url) || [,''];
-      if (
-        domain.endsWith("notion.so") && !domain.endsWith("msgstore.www.notion.so") ||
-        domain.endsWith("splunkcloud.com") ||
-        domain.endsWith("statsigapi.net")
-      ) {
-        console.info("[NCD]", "Suppress request:", url);
-        return url.replace(/^.*:(.*)\\/\\//, "/200/$1");
-      }
-      return url;
+const customFetch = () => {
+  const replacedUrl = (url: string) => {
+    const [, domain] = /^https?:\/\/([^\\/]*)/.exec(url) || ['', ''];
+    if (
+      (domain.endsWith('notion.so') &&
+        !domain.endsWith('msgstore.www.notion.so')) ||
+      domain.endsWith('splunkcloud.com') ||
+      domain.endsWith('statsigapi.net')
+    ) {
+      console.info('[NCD]', 'Suppress request:', url);
+      return url.replace(/^.*:(.*)\/\//, '/200/$1');
     }
+    return url;
+  };
 
-    fetch = new Proxy(fetch, {
-      apply: function(target, that, args) {
-        args[0] = replacedUrl(args[0]);
-        return Reflect.apply(...arguments);
-      }
-    })
+  window.fetch = new Proxy(window.fetch, {
+    apply: function (target, that, [url, ...rest]) {
+      url = replacedUrl(url);
+      return Reflect.apply(target, that, [url, ...rest]);
+    },
+  });
 
-    XMLHttpRequest = new Proxy(XMLHttpRequest, {
-      construct: function(target, args) {
-        const xhr = new target(...args);
-        xhr.open = new Proxy(xhr.open, {
-          apply: function(target, that, args) {
-            args[1] = replacedUrl(args[1]);
-            return Reflect.apply(...arguments);
-          }
-        });
-        return xhr;
-      }
-    })
-  })();
-</script>`;
+  window.XMLHttpRequest = new Proxy(XMLHttpRequest, {
+    construct: function (target, args) {
+      // @ts-expect-error A spread argument must either have a tuple type or be passed to a rest parameter.
+      const xhr = new target(...args);
+      xhr.open = new Proxy(xhr.open, {
+        apply: function (target, that, [method, url, ...rest]) {
+          url = replacedUrl(url);
+          return Reflect.apply(target, that, [method, url, ...rest]);
+        },
+      });
+      return xhr;
+    },
+  });
+};
+const customScript = `<script>(${customFetch.toString()})();</script>`;
 
 const customStyle = `<style> 
   .notion-topbar > div > div:nth-last-child(1), .notion-topbar > div > div:nth-last-child(2) { 
