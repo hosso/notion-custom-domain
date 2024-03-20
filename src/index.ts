@@ -11,17 +11,45 @@ const {
 } = process.env;
 
 const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
-const pageId = path.basename(pagePath).match(/[^-]*$/);
+const [pageId] = path.basename(pagePath).match(/[^-]*$/) || [''];
 
 // Map start page path to "/". Replacing URL for example:
 // - https://my.notion.site/0123456789abcdef0123456789abcdef -> https://mydomain.com/
 // - /My-Page-0123456789abcdef0123456789abcdef -> /
 // - /my/My-Page-0123456789abcdef0123456789abcdef -> /
-const ncd = `window.ncd={
-  href:function(){return location.href.replace(location.origin,"${pageDomain}").replace(/\\/(?=\\?|$)/,"/${pageId}")},
-  pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));},
-  replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));}
-};`.replace(/\n */gm, '');
+const locationProxy = (pageDomain: string, pageId: string) => {
+  // @ts-expect-error Property 'ncd' does not exist on type 'Window & typeof globalThis'.
+  window.ncd = {
+    href: function () {
+      return location.href
+        .replace(location.origin, pageDomain)
+        .replace(/\/(?=\?|$)/, `/${pageId}`);
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    pushState: function (a: any, b: any, url: string) {
+      history.pushState(
+        a,
+        b,
+        url
+          .replace(pageDomain, location.origin)
+          .replace(new RegExp(`(^|[^/])\\/[^/].*${pageId}(?=\\?|$)`), '$1/'),
+      );
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    replaceState: function (a: any, b: any, url: string) {
+      history.replaceState(
+        a,
+        b,
+        url
+          .replace(pageDomain, location.origin)
+          .replace(new RegExp(`(^|[^/])\\/[^/].*${pageId}(?=\\?|$)`), '$1/'),
+      );
+    },
+  };
+};
+const ncd = minify(
+  `(${locationProxy.toString()})('${pageDomain}', '${pageId}')`,
+).code;
 
 const ga = GA_MEASUREMENT_ID
   ? `<!-- Google tag (gtag.js) -->
@@ -170,11 +198,11 @@ app.use(
       } else {
         // Assume HTML
         data = data
-          .replace('</body>', `${ga}</body>`)
           .replace(
             '</head>',
             `<script>${ncd}</script>${getCustomScript()}${getCustomStyle()}</head>`,
-          );
+          )
+          .replace('</body>', `${ga}</body>`);
       }
 
       data = data
