@@ -31,7 +31,8 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "express-http-proxy": "^2.0.0"
+    "express-http-proxy": "^2.0.0",
+    "terser": "^5.29.2"
   },
   "devDependencies": {
     "@types/express-http-proxy": "^1.6.6",

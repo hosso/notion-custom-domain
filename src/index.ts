@@ -2,6 +2,7 @@ import express from 'express';
 import proxy from 'express-http-proxy';
 import { URL } from 'url';
 import path from 'path';
+import { minify_sync as minify } from 'terser';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
@@ -69,7 +70,8 @@ const customFetch = () => {
     },
   });
 };
-const customScript = `<script>(${customFetch.toString()})();</script>`;
+const customCode = minify(`(${customFetch.toString()})()`).code;
+const customScript = `<script>${customCode}</script>`;
 
 const customStyle = `<style> 
   .notion-topbar > div > div:nth-last-child(1), .notion-topbar > div > div:nth-last-child(2) { 
