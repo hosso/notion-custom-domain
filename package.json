@@ -30,11 +30,13 @@
     ]
   },
   "dependencies": {
+    "clean-css": "^5.3.3",
     "express": "^4.18.2",
     "express-http-proxy": "^2.0.0",
     "terser": "^5.29.2"
   },
   "devDependencies": {
+    "@types/clean-css": "^4.2.11",
     "@types/express-http-proxy": "^1.6.6",
     "@typescript-eslint/eslint-plugin": "^7.0.2",
     "@typescript-eslint/parser": "^7.0.2",

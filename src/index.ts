@@ -3,6 +3,7 @@ import proxy from 'express-http-proxy';
 import { URL } from 'url';
 import path from 'path';
 import { minify_sync as minify } from 'terser';
+import CleanCSS from 'clean-css';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
@@ -34,7 +35,7 @@ const ga = GA_MEASUREMENT_ID
 </script>`
   : '';
 
-const customFetch = () => {
+const customScript = () => {
   const replacedUrl = (url: string) => {
     const [, domain] = /^https?:\/\/([^\\/]*)/.exec(url) || ['', ''];
     if (
@@ -70,14 +71,22 @@ const customFetch = () => {
     },
   });
 };
-const customCode = minify(`(${customFetch.toString()})()`).code;
-const customScript = `<script>${customCode}</script>`;
 
-const customStyle = `<style> 
+const customStyle = `
   .notion-topbar > div > div:nth-last-child(1), .notion-topbar > div > div:nth-last-child(2) { 
     display:none !important; 
-  } 
-</style>`;
+  }
+`;
+
+function getCustomScript() {
+  const js = minify(`(${customScript.toString()})()`).code;
+  return `<script>${js}</script>`;
+}
+
+function getCustomStyle() {
+  const css = new CleanCSS().minify(customStyle).styles;
+  return `<style>${css}</style>`;
+}
 
 const app = express();
 
@@ -163,7 +172,7 @@ app.use(
         // Assume HTML
         data = data
           .replace('</body>', `${ga}</body>`)
-          .replace('</head>', `${customScript}${customStyle}</head>`);
+          .replace('</head>', `${getCustomScript()}${getCustomStyle()}</head>`);
       }
 
       data = data
