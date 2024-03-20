@@ -17,35 +17,57 @@ const [pageId] = path.basename(pagePath).match(/[^-]*$/) || [''];
 // - https://my.notion.site/0123456789abcdef0123456789abcdef -> https://mydomain.com/
 // - /My-Page-0123456789abcdef0123456789abcdef -> /
 // - /my/My-Page-0123456789abcdef0123456789abcdef -> /
+declare global {
+  interface Window {
+    ncd: {
+      _pageId: string;
+      _pageDomain: string;
+      _myUrl: (url: string) => string;
+      _yourUrl: (url: string) => string;
+      href: () => string;
+    };
+  }
+}
 const locationProxy = (pageDomain: string, pageId: string) => {
-  // @ts-expect-error Property 'ncd' does not exist on type 'Window & typeof globalThis'.
   window.ncd = {
+    _pageId: pageId,
+    _pageDomain: pageDomain,
+    _myUrl: function (url: string) {
+      return url
+        .replace(location.origin, this._pageDomain)
+        .replace(/\/(?=\?|$)/, `/${this._pageId}`);
+    },
+    _yourUrl: function (url: string) {
+      return url
+        .replace(this._pageDomain, location.origin)
+        .replace(
+          new RegExp(`(^|[^/])\\/[^/].*${this._pageId}(?=\\?|$)`),
+          '$1/',
+        );
+    },
     href: function () {
-      return location.href
-        .replace(location.origin, pageDomain)
-        .replace(/\/(?=\?|$)/, `/${pageId}`);
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    pushState: function (a: any, b: any, url: string) {
-      history.pushState(
-        a,
-        b,
-        url
-          .replace(pageDomain, location.origin)
-          .replace(new RegExp(`(^|[^/])\\/[^/].*${pageId}(?=\\?|$)`), '$1/'),
-      );
-    },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    replaceState: function (a: any, b: any, url: string) {
-      history.replaceState(
-        a,
-        b,
-        url
-          .replace(pageDomain, location.origin)
-          .replace(new RegExp(`(^|[^/])\\/[^/].*${pageId}(?=\\?|$)`), '$1/'),
-      );
+      return this._myUrl(location.href);
     },
   };
+
+  window.history.pushState = new Proxy(window.history.pushState, {
+    apply: function (target, that, [data, unused, url]) {
+      return Reflect.apply(target, that, [
+        data,
+        unused,
+        window.ncd._yourUrl(url),
+      ]);
+    },
+  });
+  window.history.replaceState = new Proxy(window.history.replaceState, {
+    apply: function (target, that, [data, unused, url]) {
+      return Reflect.apply(target, that, [
+        data,
+        unused,
+        window.ncd._yourUrl(url),
+      ]);
+    },
+  });
 };
 const ncd = minify(
   `(${locationProxy.toString()})('${pageDomain}', '${pageId}')`,
@@ -192,9 +214,10 @@ app.use(
       }
 
       if (/^\/_assets\/[^/]*\.js$/.test(userReq.url)) {
-        data = data
-          .replace(/window\.location\.href(?=[^=]|={2,})/g, 'ncd.href()') // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
-          .replace(/window\.history\.(pushState|replaceState)/g, 'ncd.$1');
+        data = data.replace(
+          /window\.location\.href(?=[^=]|={2,})/g,
+          'ncd.href()',
+        ); // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
       } else {
         // Assume HTML
         data = data
