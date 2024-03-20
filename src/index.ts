@@ -17,7 +17,7 @@ const pageId = path.basename(pagePath).match(/[^-]*$/);
 // - https://my.notion.site/0123456789abcdef0123456789abcdef -> https://mydomain.com/
 // - /My-Page-0123456789abcdef0123456789abcdef -> /
 // - /my/My-Page-0123456789abcdef0123456789abcdef -> /
-const ncd = `var ncd={
+const ncd = `window.ncd={
   href:function(){return location.href.replace(location.origin,"${pageDomain}").replace(/\\/(?=\\?|$)/,"/${pageId}")},
   pushState:function(a,b,url){history.pushState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));},
   replaceState:function(a,b,url){history.replaceState(a,b,url.replace("${pageDomain}",location.origin).replace(/(^|[^/])\\/[^/].*${pageId}(?=\\?|$)/,"$1/"));}
@@ -165,14 +165,16 @@ app.use(
 
       if (/^\/_assets\/[^/]*\.js$/.test(userReq.url)) {
         data = data
-          .replace(/^/, ncd)
           .replace(/window\.location\.href(?=[^=]|={2,})/g, 'ncd.href()') // Exclude 'window.locaton.href=' but not 'window.locaton.href=='
           .replace(/window\.history\.(pushState|replaceState)/g, 'ncd.$1');
       } else {
         // Assume HTML
         data = data
           .replace('</body>', `${ga}</body>`)
-          .replace('</head>', `${getCustomScript()}${getCustomStyle()}</head>`);
+          .replace(
+            '</head>',
+            `<script>${ncd}</script>${getCustomScript()}${getCustomStyle()}</head>`,
+          );
       }
 
       data = data
