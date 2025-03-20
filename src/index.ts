@@ -142,6 +142,12 @@ const app = express();
 
 app.use(
   proxy(pageDomain, {
+    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+      if (proxyReqOpts.headers) {
+        delete proxyReqOpts.headers['accept-encoding'];
+      }
+      return proxyReqOpts;
+    },
     filter: (req, res) => {
       // Pseudo endpoint returning 200
       if (/^\/200\/?/.test(req.url)) {
