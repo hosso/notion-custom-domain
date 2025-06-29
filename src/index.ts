@@ -142,7 +142,7 @@ const app = express();
 
 app.use(
   proxy(pageDomain, {
-    proxyReqOptDecorator: (proxyReqOpts, srcReq) => {
+    proxyReqOptDecorator: (proxyReqOpts) => {
       if (proxyReqOpts.headers) {
         delete proxyReqOpts.headers['accept-encoding'];
       }
