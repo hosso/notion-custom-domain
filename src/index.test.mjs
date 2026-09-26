@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   RuntimeAssetTransform,
   addAnalyticsSourcesToCsp,
+  isCacheableStaticAsset,
   rewriteCookieDomains,
   rewriteRuntimeAsset,
 } from './index.ts';
@@ -63,6 +64,13 @@ test('cookie domains are rewritten for the custom host', () => {
       'other=value; Path=/',
     ],
   );
+});
+
+test('only successful static assets are eligible for shared CDN caching', () => {
+  assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 200), true);
+  assert.equal(isCacheableStaticAsset('/_assets/runtime.js?cache=1', 200), true);
+  assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 404), false);
+  assert.equal(isCacheableStaticAsset('/api/v3/loadPageChunk', 200), false);
 });
 
 test('analytics origins are added to script and connect CSP directives', () => {

@@ -35,6 +35,10 @@ const STATIC_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 const VERCEL_STATIC_CACHE_CONTROL =
   'public, s-maxage=31536000, stale-if-error=86400';
 
+export function isCacheableStaticAsset(requestUrl: string, statusCode: number) {
+  return statusCode === 200 && STATIC_ASSET_PATTERN.test(requestUrl);
+}
+
 const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
 const [pageId] = path.basename(pagePath).match(/[^-]*$/) || [''];
 
@@ -328,6 +332,7 @@ function copyResponseHeaders(
   statusCode: number,
   transformed: boolean,
 ) {
+  const cacheableStaticAsset = isCacheableStaticAsset(requestUrl, statusCode);
   const hopByHopHeaders = new Set([
     'connection',
     'keep-alive',
@@ -341,6 +346,9 @@ function copyResponseHeaders(
 
   for (const [name, value] of Object.entries(upstreamHeaders)) {
     if (value === undefined || hopByHopHeaders.has(name)) continue;
+    // Notion's CDN adds bot-management cookies to immutable assets. Forwarding
+    // them makes Vercel treat each response as personalized and bypass its CDN.
+    if (cacheableStaticAsset && name === 'set-cookie') continue;
     if (
       transformed &&
       ['content-length', 'content-encoding', 'etag', 'content-md5'].includes(name)
@@ -351,7 +359,7 @@ function copyResponseHeaders(
   }
 
   const cookies = upstreamHeaders['set-cookie'];
-  if (cookies) {
+  if (cookies && !cacheableStaticAsset) {
     res.setHeader('set-cookie', rewriteCookieDomains(cookies, hostname));
   }
 
@@ -360,7 +368,7 @@ function copyResponseHeaders(
     res.setHeader('content-security-policy', addAnalyticsSourcesToCsp(csp));
   }
 
-  if (statusCode === 200 && STATIC_ASSET_PATTERN.test(requestUrl)) {
+  if (cacheableStaticAsset) {
     res.setHeader('cache-control', STATIC_CACHE_CONTROL);
     res.setHeader('vercel-cdn-cache-control', VERCEL_STATIC_CACHE_CONTROL);
   }
