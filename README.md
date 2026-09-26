@@ -6,24 +6,23 @@ Custom domains for your Notion pages. You can publish your page to your own doma
 
 ## Getting Started
 
-Install dependencies:
+Use Node.js 24, then install dependencies:
 
 ```
-yarn
+npm install
 ```
 
-Then deploy to Vercel with specifying your public Notion page:
+Link the repository to Vercel and configure your public Notion page:
 
 ```
-PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-yarn deploy:prod
+npx --yes vercel@latest link
+npx --yes vercel@latest env add PAGE_URL
 ```
 
-For example:
+Then deploy it:
 
 ```
-PAGE_URL=https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8 \
-yarn deploy:prod
+npm run deploy:prod
 ```
 
 Finally, set up a custom domain for the deployment on the Vercel Dashboard. See [Custom Domains – Vercel Docs](https://vercel.com/docs/concepts/projects/custom-domains)
@@ -36,7 +35,7 @@ Finally, set up a custom domain for the deployment on the Vercel Dashboard. See 
 
 ```
 PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-yarn dev
+npm run dev
 ```
 
 Then open http://localhost:3000.
@@ -45,25 +44,24 @@ Then open http://localhost:3000.
 
 ```
 PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-yarn debug
+npm run debug
 ```
 
 Then open http://localhost:3000.
 
 ## Google Analytics Support
 
-Deploying with `GA_MEASUREMENT_ID` environment variable injects the tracking code into your public Notion page:
+Configuring `GA_MEASUREMENT_ID` injects the tracking code into your public Notion page:
 
 ```
-PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-GA_MEASUREMENT_ID=G-XXXXXXXXXX \
-yarn deploy:prod
+npx --yes vercel@latest env add GA_MEASUREMENT_ID
 ```
 
 ## Using Environment Variables on the Vercel Dashboard
 
-You can use environment variables on the Vercel Dashboard. In this case, you can simply run
-`vercel env pull`, `vercel dev`, `vercel deploy` or `vercel deploy --prod` without setting environment variables.
+You can use environment variables on the Vercel Dashboard. After linking the
+project, run `npm run vc:dev`, `npm run deploy`, or `npm run deploy:prod`
+without setting environment variables in your shell.
 ![](https://github.com/hosso/notion-custom-domain/assets/19500280/e234a2eb-8ba7-4be0-a1dd-fa58ce0327ab)
 
 ## Production Monitoring
@@ -94,8 +92,18 @@ The investigation steps are documented in [`docs/monitoring.md`](docs/monitoring
 You can also run the same check locally:
 
 ```sh
-SITE_URL=https://notion-custom-domain.hosso.co yarn monitor:smoke
+SITE_URL=https://notion-custom-domain.hosso.co npm run monitor:smoke
 ```
+
+## Quality Checks
+
+Run the same checks used by CI:
+
+```sh
+npm run check
+```
+
+Use `npm run fix` to apply Biome's safe lint and formatting fixes.
 
 ## License
 

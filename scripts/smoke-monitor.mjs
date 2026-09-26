@@ -58,7 +58,10 @@ const summary = {
   checks,
 };
 
-await writeFile(`${artifactDir}/summary.json`, JSON.stringify(summary, null, 2));
+await writeFile(
+  `${artifactDir}/summary.json`,
+  JSON.stringify(summary, null, 2),
+);
 await writeFile(`${artifactDir}/response.html`, html);
 await writeFile(`${artifactDir}/headers.txt`, headers);
 

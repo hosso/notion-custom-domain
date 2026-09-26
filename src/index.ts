@@ -1,11 +1,11 @@
-import express from 'express';
 import http from 'node:http';
 import https from 'node:https';
-import { StringDecoder } from 'node:string_decoder';
+import path from 'node:path';
 import { pipeline, Transform } from 'node:stream';
+import { StringDecoder } from 'node:string_decoder';
+import { URL } from 'node:url';
 import { createGunzip, createGzip } from 'node:zlib';
-import { URL } from 'url';
-import path from 'path';
+import express from 'express';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
@@ -81,13 +81,8 @@ const locationProxy = (pageDomain: string, pageId: string) => {
 
   const proxyHistoryMethod = (method: typeof window.history.pushState) =>
     new Proxy(method, {
-      apply: function (target, that, [data, unused, url]) {
-        return Reflect.apply(target, that, [
-          data,
-          unused,
-          window.ncd._yourUrl(url),
-        ]);
-      },
+      apply: (target, that, [data, unused, url]) =>
+        Reflect.apply(target, that, [data, unused, window.ncd._yourUrl(url)]),
     });
   window.history.pushState = proxyHistoryMethod(window.history.pushState);
   window.history.replaceState = proxyHistoryMethod(window.history.replaceState);
@@ -125,18 +120,18 @@ const customScript = () => {
   };
 
   window.fetch = new Proxy(window.fetch, {
-    apply: function (target, that, [url, ...rest]) {
+    apply: (target, that, [url, ...rest]) => {
       url = replacedUrl(url);
       return Reflect.apply(target, that, [url, ...rest]);
     },
   });
 
   window.XMLHttpRequest = new Proxy(XMLHttpRequest, {
-    construct: function (target, args) {
+    construct: (target, args) => {
       // @ts-expect-error A spread argument must either have a tuple type or be passed to a rest parameter.
       const xhr = new target(...args);
       xhr.open = new Proxy(xhr.open, {
-        apply: function (target, that, [method, url, ...rest]) {
+        apply: (target, that, [method, url, ...rest]) => {
           url = replacedUrl(url);
           return Reflect.apply(target, that, [method, url, ...rest]);
         },
@@ -249,13 +244,13 @@ export class RuntimeAssetTransform extends Transform {
         }
       }
 
-      if (nextIndex === -1 || nextIndex >= safeStartLimit) {
+      if (nextIndex === -1 || nextIndex >= safeStartLimit || !nextReplacement) {
         output += data.slice(cursor, safeStartLimit);
         cursor = safeStartLimit;
         break;
       }
 
-      const [search, replacement] = nextReplacement!;
+      const [search, replacement] = nextReplacement;
       const nextCharacter = data[nextIndex + search.length];
       const followingCharacter = data[nextIndex + search.length + 1];
       if (search === '.init({dsn:') {
@@ -351,7 +346,9 @@ function copyResponseHeaders(
     if (cacheableStaticAsset && name === 'set-cookie') continue;
     if (
       transformed &&
-      ['content-length', 'content-encoding', 'etag', 'content-md5'].includes(name)
+      ['content-length', 'content-encoding', 'etag', 'content-md5'].includes(
+        name,
+      )
     ) {
       continue;
     }

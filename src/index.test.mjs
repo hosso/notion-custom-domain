@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import test from 'node:test';
 import {
-  RuntimeAssetTransform,
   addAnalyticsSourcesToCsp,
   isCacheableStaticAsset,
+  RuntimeAssetTransform,
   rewriteCookieDomains,
   rewriteRuntimeAsset,
 } from './index.ts';
@@ -59,16 +59,16 @@ test('cookie domains are rewritten for the custom host', () => {
       ],
       'example.com',
     ),
-    [
-      'token=value; Domain=example.com; Path=/',
-      'other=value; Path=/',
-    ],
+    ['token=value; Domain=example.com; Path=/', 'other=value; Path=/'],
   );
 });
 
 test('only successful static assets are eligible for shared CDN caching', () => {
   assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 200), true);
-  assert.equal(isCacheableStaticAsset('/_assets/runtime.js?cache=1', 200), true);
+  assert.equal(
+    isCacheableStaticAsset('/_assets/runtime.js?cache=1', 200),
+    true,
+  );
   assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 404), false);
   assert.equal(isCacheableStaticAsset('/api/v3/loadPageChunk', 200), false);
 });

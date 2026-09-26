@@ -1,8 +1,8 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "builds": [{ "src": "src/index.ts", "use": "@vercel/node" }],
   "redirects": [
     { "source": "/[^/.]{1,8}", "destination": "/", "permanent": false }
   ],
-  "rewrites": [{ "source": "/(.*)", "destination": "/src/index.ts" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
 }

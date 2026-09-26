@@ -23,13 +23,13 @@ fails.
 Run the app locally against the same page:
 
 ```sh
-PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> yarn dev
+PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> npm run dev
 ```
 
 Run the same smoke check locally against your local server:
 
 ```sh
-SITE_URL=http://localhost:3000 yarn monitor:smoke
+SITE_URL=http://localhost:3000 npm run monitor:smoke
 ```
 
 If the production domain and the local server behave differently, compare the
@@ -43,8 +43,8 @@ captured HTML between environments first.
 4. Run:
 
 ```sh
-yarn format-check
-SITE_URL=http://localhost:3000 yarn monitor:smoke
+npm run check
+SITE_URL=http://localhost:3000 npm run monitor:smoke
 ```
 
 5. Open a PR with the reproduction and the fix summary.

@@ -1,11 +1,15 @@
 {
   "compilerOptions": {
-    "target": "esnext",
-    "module": "nodenext",
-    "lib": ["esnext", "dom"],
-    "strict": true,
     "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ES2024", "DOM"],
+    "module": "NodeNext",
+    "moduleDetection": "force",
+    "noEmit": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "ES2024",
+    "types": ["node"]
   },
-  "include": ["src/**/*"]
+  "include": ["api/**/*.ts", "src/**/*.ts"]
 }
