@@ -38,8 +38,8 @@ const checks = [
   },
   {
     name: 'injects location proxy script',
-    pass: html.includes('window.ncd='),
-    details: 'Expected injected location proxy marker `window.ncd=`',
+    pass: /window\.ncd\s*=/.test(html),
+    details: 'Expected injected location proxy assignment',
   },
   {
     name: 'injects custom style overrides',

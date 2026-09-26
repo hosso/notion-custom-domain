@@ -1,9 +1,11 @@
 import express from 'express';
-import proxy from 'express-http-proxy';
+import http from 'node:http';
+import https from 'node:https';
+import { StringDecoder } from 'node:string_decoder';
+import { pipeline, Transform } from 'node:stream';
+import { createGunzip, createGzip } from 'node:zlib';
 import { URL } from 'url';
 import path from 'path';
-import { minify_sync as minify } from 'terser';
-import CleanCSS from 'clean-css';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
@@ -21,11 +23,17 @@ const CUSTOM_STYLE = `
   }
 `;
 const LOCATION_HREF_PATTERN = /window\.location\.href(?=[^=]|={2,})/g;
-const ASSET_REQUEST_PATTERN = /^\/_assets\/[^/]*\.js$/;
 const STATIC_ASSET_PATTERN = /^\/_assets\//;
 const PASSTHROUGH_REQUEST_PATTERN = /^\/(image[s]?|api)\//;
+const JAVASCRIPT_ASSET_PATTERN = /^\/_assets\/[^/]+\.js(?:\?|$)/;
+const PASSTHROUGH_JAVASCRIPT_PATTERN =
+  /^\/_assets\/localeSetup-[^/]+\.js(?:\?|$)/;
 const PUBLIC_PAGE_DATA_ENDPOINT = '/200/www.notion.so/api/v3/';
 const EXPERIMENT_ENDPOINT = '/200/exp.notion.so/v1/';
+const UPSTREAM_TIMEOUT_MS = 20_000;
+const STATIC_CACHE_CONTROL = 'public, max-age=31536000, immutable';
+const VERCEL_STATIC_CACHE_CONTROL =
+  'public, s-maxage=31536000, stale-if-error=86400';
 
 const { origin: pageDomain, pathname: pagePath } = new URL(PAGE_URL);
 const [pageId] = path.basename(pagePath).match(/[^-]*$/) || [''];
@@ -81,14 +89,8 @@ const locationProxy = (pageDomain: string, pageId: string) => {
   window.history.replaceState = proxyHistoryMethod(window.history.replaceState);
 };
 
-function minifyExpression(expression: string) {
-  return minify(expression).code;
-}
-
 function getLocationProxyScript() {
-  return minifyExpression(
-    `(${locationProxy.toString()})('${pageDomain}', '${pageId}')`,
-  );
+  return `(${locationProxy.toString()})(${JSON.stringify(pageDomain)},${JSON.stringify(pageId)})`;
 }
 
 const ga = GA_MEASUREMENT_ID
@@ -141,12 +143,11 @@ const customScript = () => {
 };
 
 function getCustomScript() {
-  const js = minifyExpression(`(${customScript.toString()})()`);
-  return `<script>${js}</script>`;
+  return `<script>(${customScript.toString()})()</script>`;
 }
 
 function getCustomStyle() {
-  const css = new CleanCSS().minify(CUSTOM_STYLE).styles;
+  const css = CUSTOM_STYLE.replace(/\s+/g, ' ').trim();
   return `<style>${css}</style>`;
 }
 
@@ -156,7 +157,7 @@ function getProxyPath(url: string) {
   return url.replace(/\/(\?|$)/, `/${pageId}$1`);
 }
 
-function rewriteCookieDomains(cookies: string[], hostname: string) {
+export function rewriteCookieDomains(cookies: string[], hostname: string) {
   return cookies.map((cookie) =>
     cookie.replace(
       /((?:^|; )Domain=)(?:[^.]+\.)?notion\.site(;|$)/gi,
@@ -165,14 +166,14 @@ function rewriteCookieDomains(cookies: string[], hostname: string) {
   );
 }
 
-function addAnalyticsSourcesToCsp(csp: string) {
+export function addAnalyticsSourcesToCsp(csp: string) {
   return csp.replace(
     /(?=(script-src|connect-src) )[^;]*/g,
     `$& ${GOOGLE_ANALYTICS_SOURCES}`,
   );
 }
 
-function isPseudoSuccessEndpoint(url: string) {
+export function isPseudoSuccessEndpoint(url: string) {
   return /^\/200\/?/.test(url);
 }
 
@@ -186,17 +187,17 @@ function handlePseudoSuccessEndpoint(url: string, res: express.Response) {
   }
 }
 
-function rewriteRuntimeAsset(data: string) {
+export function rewriteRuntimeAsset(data: string) {
   return data.replace(LOCATION_HREF_PATTERN, 'window.ncd.href()');
 }
 
-function rewriteHtml(data: string) {
+export function rewriteHtml(data: string) {
   return data
     .replace('</head>', `${injectedHeadMarkup}</head>`)
     .replace('</body>', `${ga}</body>`);
 }
 
-function rewriteSharedResponseContent(data: string) {
+export function rewriteSharedResponseContent(data: string) {
   return data
     .replace(
       /https:\/\/((aif\.notion\.so|widget\.intercom\.io)\/?[^"`]*)/g,
@@ -205,98 +206,291 @@ function rewriteSharedResponseContent(data: string) {
     .replace(/\w+\.init\({dsn:/, 'return;$&');
 }
 
-function decorateHtmlOrAssetResponse(data: string, requestUrl: string) {
-  const rewritten = ASSET_REQUEST_PATTERN.test(requestUrl)
-    ? rewriteRuntimeAsset(data)
-    : rewriteHtml(data);
+const STREAM_REPLACEMENTS = [
+  ['window.location.href', 'window.ncd.href()'],
+  ['https://aif.notion.so', '/200/aif.notion.so'],
+  ['https://widget.intercom.io', '/200/widget.intercom.io'],
+  ['.init({dsn:', ''],
+] as const;
 
-  return rewriteSharedResponseContent(rewritten);
+/**
+ * Rewrites fixed strings without buffering the complete JavaScript asset.
+ * The unprocessed suffix is kept between chunks so matches split across
+ * network chunks are handled correctly.
+ */
+export class RuntimeAssetTransform extends Transform {
+  private readonly decoder = new StringDecoder('utf8');
+  private pending = '';
+  private readonly longestSearch = Math.max(
+    128,
+    ...STREAM_REPLACEMENTS.map(([search]) => search.length),
+  );
+
+  private process(data: string, flush = false) {
+    const safeStartLimit = flush
+      ? data.length
+      : Math.max(0, data.length - this.longestSearch + 1);
+    let cursor = 0;
+    let output = '';
+
+    while (cursor < safeStartLimit) {
+      let nextIndex = -1;
+      let nextReplacement: (typeof STREAM_REPLACEMENTS)[number] | undefined;
+
+      for (const replacement of STREAM_REPLACEMENTS) {
+        const index = data.indexOf(replacement[0], cursor);
+        if (index !== -1 && (nextIndex === -1 || index < nextIndex)) {
+          nextIndex = index;
+          nextReplacement = replacement;
+        }
+      }
+
+      if (nextIndex === -1 || nextIndex >= safeStartLimit) {
+        output += data.slice(cursor, safeStartLimit);
+        cursor = safeStartLimit;
+        break;
+      }
+
+      const [search, replacement] = nextReplacement!;
+      const nextCharacter = data[nextIndex + search.length];
+      const followingCharacter = data[nextIndex + search.length + 1];
+      if (search === '.init({dsn:') {
+        let identifierStart = nextIndex;
+        while (
+          identifierStart > cursor &&
+          /\w/.test(data[identifierStart - 1])
+        ) {
+          identifierStart -= 1;
+        }
+        output +=
+          data.slice(cursor, identifierStart) +
+          (identifierStart < nextIndex ? 'return;' : '') +
+          data.slice(identifierStart, nextIndex) +
+          search;
+        cursor = nextIndex + search.length;
+        continue;
+      }
+
+      const shouldKeepLocationHref =
+        search === 'window.location.href' &&
+        (nextCharacter === undefined ||
+          (nextCharacter === '=' && followingCharacter !== '='));
+
+      output +=
+        data.slice(cursor, nextIndex) +
+        (shouldKeepLocationHref ? search : replacement);
+      cursor = nextIndex + search.length;
+    }
+
+    return { output, pending: data.slice(cursor) };
+  }
+
+  override _transform(
+    chunk: Buffer,
+    _encoding: BufferEncoding,
+    callback: (error?: Error | null) => void,
+  ) {
+    const data = this.pending + this.decoder.write(chunk);
+    const result = this.process(data);
+    this.push(result.output);
+    this.pending = result.pending;
+    callback();
+  }
+
+  override _flush(callback: (error?: Error | null) => void) {
+    this.push(this.process(this.pending + this.decoder.end(), true).output);
+    callback();
+  }
 }
 
-// Filenames under /_assets/ are content-hashed, so responses are immutable.
-interface CacheEntry {
-  data: Buffer | string;
-  contentType: string;
+function shouldRewriteHtml(req: express.Request) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return false;
+  if (
+    STATIC_ASSET_PATTERN.test(req.url) ||
+    PASSTHROUGH_REQUEST_PATTERN.test(req.url)
+  ) {
+    return false;
+  }
+
+  const pathname = new URL(req.url, 'http://localhost').pathname;
+  return (
+    req.headers.accept?.includes('text/html') ||
+    pathname === '/' ||
+    !path.posix.basename(pathname).includes('.')
+  );
 }
-const assetCache = new Map<string, CacheEntry>();
+
+function copyResponseHeaders(
+  upstreamHeaders: http.IncomingHttpHeaders,
+  res: express.Response,
+  hostname: string,
+  requestUrl: string,
+  statusCode: number,
+  transformed: boolean,
+) {
+  const hopByHopHeaders = new Set([
+    'connection',
+    'keep-alive',
+    'proxy-authenticate',
+    'proxy-authorization',
+    'te',
+    'trailer',
+    'transfer-encoding',
+    'upgrade',
+  ]);
+
+  for (const [name, value] of Object.entries(upstreamHeaders)) {
+    if (value === undefined || hopByHopHeaders.has(name)) continue;
+    if (
+      transformed &&
+      ['content-length', 'content-encoding', 'etag', 'content-md5'].includes(name)
+    ) {
+      continue;
+    }
+    res.setHeader(name, value);
+  }
+
+  const cookies = upstreamHeaders['set-cookie'];
+  if (cookies) {
+    res.setHeader('set-cookie', rewriteCookieDomains(cookies, hostname));
+  }
+
+  const csp = upstreamHeaders['content-security-policy'];
+  if (typeof csp === 'string') {
+    res.setHeader('content-security-policy', addAnalyticsSourcesToCsp(csp));
+  }
+
+  if (statusCode === 200 && STATIC_ASSET_PATTERN.test(requestUrl)) {
+    res.setHeader('cache-control', STATIC_CACHE_CONTROL);
+    res.setHeader('vercel-cdn-cache-control', VERCEL_STATIC_CACHE_CONTROL);
+  }
+}
+
+function proxyRequest(req: express.Request, res: express.Response) {
+  const rewriteHtmlResponse = shouldRewriteHtml(req);
+  const rewriteRuntimeResponse =
+    JAVASCRIPT_ASSET_PATTERN.test(req.url) &&
+    !PASSTHROUGH_JAVASCRIPT_PATTERN.test(req.url);
+  const transformed = rewriteHtmlResponse || rewriteRuntimeResponse;
+  const target = new URL(getProxyPath(req.url), pageDomain);
+  const headers: http.OutgoingHttpHeaders = {
+    ...req.headers,
+    host: target.host,
+  };
+
+  if (rewriteHtmlResponse) {
+    headers['accept-encoding'] = 'identity';
+  } else if (rewriteRuntimeResponse) {
+    // gzip is supported by Node's streaming zlib implementation. Requesting a
+    // known encoding keeps the upstream transfer small while avoiding a full
+    // response buffer before rewriting.
+    headers['accept-encoding'] = 'gzip';
+  }
+
+  const transport = target.protocol === 'https:' ? https : http;
+  const upstreamRequest = transport.request(
+    target,
+    {
+      method: req.method,
+      headers,
+    },
+    (upstreamResponse) => {
+      res.statusCode = upstreamResponse.statusCode ?? 502;
+      if (upstreamResponse.statusMessage) {
+        res.statusMessage = upstreamResponse.statusMessage;
+      }
+      copyResponseHeaders(
+        upstreamResponse.headers,
+        res,
+        req.hostname,
+        req.url,
+        res.statusCode,
+        transformed,
+      );
+
+      const handleStreamError = (error: NodeJS.ErrnoException | null) => {
+        if (!error) return;
+        if (!res.headersSent) {
+          res.status(502).send('Bad Gateway');
+        } else if (!res.destroyed) {
+          res.destroy(error);
+        }
+      };
+
+      if (req.method === 'HEAD') {
+        upstreamResponse.resume();
+        res.end();
+        return;
+      }
+
+      if (rewriteHtmlResponse) {
+        const chunks: Buffer[] = [];
+        upstreamResponse.on('data', (chunk: Buffer) => chunks.push(chunk));
+        upstreamResponse.on('error', handleStreamError);
+        upstreamResponse.on('end', () => {
+          const html = Buffer.concat(chunks).toString();
+          res.send(rewriteSharedResponseContent(rewriteHtml(html)));
+        });
+        return;
+      }
+
+      if (rewriteRuntimeResponse) {
+        const contentEncoding = upstreamResponse.headers['content-encoding'];
+        if (contentEncoding === 'gzip') {
+          res.setHeader('content-encoding', 'gzip');
+          res.flushHeaders();
+          pipeline(
+            upstreamResponse,
+            createGunzip(),
+            new RuntimeAssetTransform(),
+            createGzip(),
+            res,
+            handleStreamError,
+          );
+        } else if (!contentEncoding || contentEncoding === 'identity') {
+          res.flushHeaders();
+          pipeline(
+            upstreamResponse,
+            new RuntimeAssetTransform(),
+            res,
+            handleStreamError,
+          );
+        } else {
+          upstreamResponse.destroy();
+          res.status(502).send('Unsupported upstream content encoding');
+        }
+      } else {
+        res.flushHeaders();
+        pipeline(upstreamResponse, res, handleStreamError);
+      }
+    },
+  );
+
+  upstreamRequest.setTimeout(UPSTREAM_TIMEOUT_MS, () => {
+    upstreamRequest.destroy(new Error('Upstream request timed out'));
+  });
+  upstreamRequest.on('error', (error) => {
+    if (!res.headersSent) {
+      res.status(502).send('Bad Gateway');
+    } else {
+      res.destroy(error);
+    }
+  });
+  req.on('aborted', () => upstreamRequest.destroy());
+  req.pipe(upstreamRequest);
+}
 
 const app = express();
 
 app.use((req, res, next) => {
-  const cached = assetCache.get(req.url);
-  if (cached) {
-    res.setHeader('content-type', cached.contentType);
-    res.setHeader('cache-control', 'public, max-age=31536000, immutable');
-    res.send(cached.data);
+  if (isPseudoSuccessEndpoint(req.url)) {
+    handlePseudoSuccessEndpoint(req.url, res);
     return;
   }
   next();
 });
 
-app.use(
-  proxy(pageDomain, {
-    proxyReqOptDecorator: (proxyReqOpts) => {
-      if (proxyReqOpts.headers) {
-        delete proxyReqOpts.headers['accept-encoding'];
-      }
-      return proxyReqOpts;
-    },
-    filter: (req, res) => {
-      if (isPseudoSuccessEndpoint(req.url)) {
-        handlePseudoSuccessEndpoint(req.url, res);
-        return false;
-      }
-      return true;
-    },
-    proxyReqPathResolver: (req) => {
-      return getProxyPath(req.url);
-    },
-    userResHeaderDecorator: (headers, userReq) => {
-      const cookies = headers['set-cookie'];
-      if (cookies) {
-        headers['set-cookie'] = rewriteCookieDomains(cookies, userReq.hostname);
-      }
-
-      const csp = headers['content-security-policy'] as string;
-      if (csp) {
-        headers['content-security-policy'] = addAnalyticsSourcesToCsp(csp);
-      }
-
-      if (STATIC_ASSET_PATTERN.test(userReq.url)) {
-        headers['cache-control'] = 'public, max-age=31536000, immutable';
-      }
-
-      return headers;
-    },
-    userResDecorator: (proxyRes, proxyResData, userReq) => {
-      const contentType = proxyRes.headers['content-type'] ?? '';
-      if (
-        PASSTHROUGH_REQUEST_PATTERN.test(userReq.url) ||
-        !contentType.startsWith('text/') && !contentType.includes('javascript')
-      ) {
-        if (
-          STATIC_ASSET_PATTERN.test(userReq.url) &&
-          proxyRes.statusCode === 200
-        ) {
-          assetCache.set(userReq.url, { data: proxyResData, contentType });
-        }
-        return proxyResData;
-      }
-
-      const data = proxyResData.toString();
-      const result = decorateHtmlOrAssetResponse(data, userReq.url);
-
-      if (
-        STATIC_ASSET_PATTERN.test(userReq.url) &&
-        proxyRes.statusCode === 200
-      ) {
-        assetCache.set(userReq.url, { data: result, contentType });
-      }
-
-      return result;
-    },
-  }),
-);
+app.use(proxyRequest);
 
 if (!process.env.VERCEL_REGION && !process.env.NOW_REGION) {
   const port = process.env.PORT || 3000;
