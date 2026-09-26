@@ -40,15 +40,6 @@ npm run dev
 
 Then open http://localhost:3000.
 
-### Debug with Node Inspector
-
-```
-PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> \
-npm run debug
-```
-
-Then open http://localhost:3000.
-
 ## Google Analytics Support
 
 Configuring `GA_MEASUREMENT_ID` injects the tracking code into your public Notion page:
@@ -60,7 +51,7 @@ npx --yes vercel@latest env add GA_MEASUREMENT_ID
 ## Using Environment Variables on the Vercel Dashboard
 
 You can use environment variables on the Vercel Dashboard. After linking the
-project, run `npm run vc:dev`, `npm run deploy`, or `npm run deploy:prod`
+project, run `npm run vercel:dev`, `npm run deploy`, or `npm run deploy:prod`
 without setting environment variables in your shell.
 ![](https://github.com/hosso/notion-custom-domain/assets/19500280/e234a2eb-8ba7-4be0-a1dd-fa58ce0327ab)
 

@@ -1,5 +1,4 @@
 {
-  "debug.javascript.autoAttachFilter": "onlyWithFlag",
   "editor.defaultFormatter": "biomejs.biome",
   "editor.formatOnSave": true
 }

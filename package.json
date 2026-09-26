@@ -6,23 +6,18 @@
   "author": "E. Hosso",
   "private": true,
   "type": "module",
-  "packageManager": "npm@11.16.0",
-  "allowScripts": {
-    "esbuild@0.28.2": true
-  },
   "scripts": {
     "check": "npm run lint && npm run typecheck && npm test",
-    "debug": "tsx --env-file-if-exists=.env --inspect src/index.ts",
     "deploy": "npx --yes vercel@latest deploy",
     "deploy:prod": "npx --yes vercel@latest deploy --prod",
-    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
+    "dev": "node --watch --env-file-if-exists=.env src/index.ts",
     "fix": "biome check --write .",
     "lint": "biome check .",
     "monitor:smoke": "node scripts/smoke-monitor.mjs",
-    "test": "VERCEL_REGION=test tsx --test src/index.test.mjs",
+    "test": "VERCEL_REGION=test node --test src/index.test.mjs",
     "typecheck": "tsc --noEmit",
-    "vc:dev": "npx --yes vercel@latest dev",
-    "vc:dev:debug": "npx --yes vercel@latest dev --debug"
+    "vercel:build": "npx --yes vercel@latest build",
+    "vercel:dev": "npx --yes vercel@latest dev"
   },
   "dependencies": {
     "express": "^5.2.1"
@@ -31,7 +26,6 @@
     "@biomejs/biome": "^2.5.14",
     "@types/express": "^5.0.6",
     "@types/node": "^24.19.0",
-    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
   "engines": {
