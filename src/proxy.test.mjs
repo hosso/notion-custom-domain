@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getRequestHostname, isCacheableStaticAsset } from './proxy.ts';
+import {
+  getRequestBody,
+  getRequestHostname,
+  isCacheableStaticAsset,
+} from './proxy.ts';
 
 test('request hostname excludes the local port used for cookie rewriting', () => {
   assert.equal(
@@ -18,4 +22,16 @@ test('only successful static assets are eligible for shared CDN caching', () => 
   );
   assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 404), false);
   assert.equal(isCacheableStaticAsset('/api/v3/loadPageChunk', 200), false);
+});
+
+test('uses Vercel-parsed request bodies when present', () => {
+  assert.equal(
+    getRequestBody({ body: { spaceId: 'page-id' } }).toString(),
+    '{"spaceId":"page-id"}',
+  );
+  assert.equal(
+    getRequestBody({ body: Buffer.from('payload') }).toString(),
+    'payload',
+  );
+  assert.equal(getRequestBody({}), undefined);
 });

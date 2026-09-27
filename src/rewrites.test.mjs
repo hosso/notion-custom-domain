@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import test from 'node:test';
+import { createInjectedHeadMarkup } from './client-script.ts';
 import {
   addAnalyticsSourcesToCsp,
   RuntimeAssetTransform,
@@ -86,4 +87,15 @@ test('analytics origins are added to script and connect CSP directives', () => {
     csp,
     /connect-src 'self' https:\/\/www\.googletagmanager\.com https:\/\/www\.google-analytics\.com/,
   );
+});
+
+test('injected browser scripts are self-contained', () => {
+  const markup = createInjectedHeadMarkup(
+    'https://example.notion.site',
+    'page-id',
+  );
+
+  assert.doesNotMatch(markup, /__name/);
+  assert.match(markup, /window\.ncd/);
+  assert.match(markup, /pageDomain.*example\.notion\.site/);
 });

@@ -60,6 +60,18 @@ function getRequestUrl(req: http.IncomingMessage) {
   return req.url ?? '/';
 }
 
+/**
+ * `vercel dev` parses request bodies before invoking a Node function. Forward
+ * that parsed value instead of piping an already-consumed request stream.
+ */
+export function getRequestBody(req: http.IncomingMessage) {
+  const body = (req as http.IncomingMessage & { body?: unknown }).body;
+  if (body === undefined) return undefined;
+  if (Buffer.isBuffer(body)) return body;
+  if (typeof body === 'string') return Buffer.from(body);
+  return Buffer.from(JSON.stringify(body));
+}
+
 function getProxyPath(url: string, pageId: string) {
   return url.replace(/\/(\?|$)/, `/${pageId}$1`);
 }
@@ -176,6 +188,12 @@ function proxyRequest(
     ...req.headers,
     host: target.host,
   };
+  const requestBody = getRequestBody(req);
+
+  if (requestBody) {
+    headers['content-length'] = requestBody.length;
+    delete headers['transfer-encoding'];
+  }
 
   if (rewriteHtmlResponse) {
     headers['accept-encoding'] = 'identity';
@@ -284,7 +302,11 @@ function proxyRequest(
     }
   });
   req.on('aborted', () => upstreamRequest.destroy());
-  req.pipe(upstreamRequest);
+  if (requestBody) {
+    upstreamRequest.end(requestBody);
+  } else {
+    req.pipe(upstreamRequest);
+  }
 }
 
 export function createHandler(config: ProxyConfig) {

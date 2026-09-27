@@ -19,40 +19,10 @@ declare global {
   }
 }
 
-const locationProxy = (pageDomain: string, pageId: string) => {
-  window.ncd = {
-    _pageId: pageId,
-    _pageDomain: pageDomain,
-    _myUrl: function (url: string) {
-      return url
-        .replace(location.origin, this._pageDomain)
-        .replace(/\/(?=\?|$)/, `/${this._pageId}`);
-    },
-    _yourUrl: function (url: string) {
-      return url
-        .replace(this._pageDomain, location.origin)
-        .replace(
-          new RegExp(`(^|[^/])\\/[^/].*${this._pageId}(?=\\?|$)`),
-          '$1/',
-        );
-    },
-    href: function () {
-      return this._myUrl(location.href);
-    },
-  };
-
-  const proxyHistoryMethod = (method: typeof window.history.pushState) =>
-    new Proxy(method, {
-      apply: (target, that, [data, unused, url]) =>
-        Reflect.apply(target, that, [data, unused, window.ncd._yourUrl(url)]),
-    });
-  window.history.pushState = proxyHistoryMethod(window.history.pushState);
-  window.history.replaceState = proxyHistoryMethod(window.history.replaceState);
-};
-
-const customScript = () => {
-  const replacedUrl = (url: string) => {
-    const [, domain] = /^https?:\/\/([^\\/]*)/.exec(url) || ['', ''];
+const CUSTOM_SCRIPT = `<script>
+(() => {
+  const replacedUrl = (url) => {
+    const [, domain] = /^https?:\\/\\/([^\\/]*)/.exec(url) || ['', ''];
     if (
       (domain.endsWith('notion.so') &&
         !domain.endsWith('msgstore.www.notion.so')) ||
@@ -60,38 +30,68 @@ const customScript = () => {
       domain.endsWith('statsigapi.net')
     ) {
       console.info('[NCD]', 'Suppress request:', url);
-      return url.replace(/^.*:(.*)\/\//, '/200/$1');
+      return url.replace(/^.*:(.*)\\/\\//, '/200/$1');
     }
     return url;
   };
 
   window.fetch = new Proxy(window.fetch, {
-    apply: (target, that, [url, ...rest]) => {
-      url = replacedUrl(url);
-      return Reflect.apply(target, that, [url, ...rest]);
-    },
+    apply: (target, that, [url, ...rest]) =>
+      Reflect.apply(target, that, [replacedUrl(url), ...rest]),
   });
 
   window.XMLHttpRequest = new Proxy(XMLHttpRequest, {
     construct: (target, args) => {
-      // @ts-expect-error A spread argument must either have a tuple type or be passed to a rest parameter.
       const xhr = new target(...args);
       xhr.open = new Proxy(xhr.open, {
-        apply: (target, that, [method, url, ...rest]) => {
-          url = replacedUrl(url);
-          return Reflect.apply(target, that, [method, url, ...rest]);
-        },
+        apply: (target, that, [method, url, ...rest]) =>
+          Reflect.apply(target, that, [method, replacedUrl(url), ...rest]),
       });
       return xhr;
     },
   });
-};
+})();
+</script>`;
+
+function createLocationProxyScript(pageDomain: string, pageId: string) {
+  return `<script>
+(() => {
+  const { pageDomain, pageId } = ${JSON.stringify({ pageDomain, pageId })};
+  window.ncd = {
+    _pageId: pageId,
+    _pageDomain: pageDomain,
+    _myUrl(url) {
+      return url
+        .replace(location.origin, this._pageDomain)
+        .replace(/\\/(?=\\?|$)/, '/' + this._pageId);
+    },
+    _yourUrl(url) {
+      return url
+        .replace(this._pageDomain, location.origin)
+        .replace(
+          new RegExp('(^|[^/])\\\\/[^/].*' + this._pageId + '(?=\\\\?|$)'),
+          '$1/',
+        );
+    },
+    href() {
+      return this._myUrl(location.href);
+    },
+  };
+
+  const proxyHistoryMethod = (method) =>
+    new Proxy(method, {
+      apply: (target, that, [data, unused, url]) =>
+        Reflect.apply(target, that, [data, unused, window.ncd._yourUrl(url)]),
+    });
+  window.history.pushState = proxyHistoryMethod(window.history.pushState);
+  window.history.replaceState = proxyHistoryMethod(window.history.replaceState);
+})();
+</script>`;
+}
 
 export function createInjectedHeadMarkup(pageDomain: string, pageId: string) {
-  const locationScript = `(${locationProxy.toString()})(${JSON.stringify(pageDomain)},${JSON.stringify(pageId)})`;
-  const script = `<script>(${customScript.toString()})()</script>`;
   const css = CUSTOM_STYLE.replace(/\s+/g, ' ').trim();
-  return `<script>${locationScript}</script>${script}<style>${css}</style>`;
+  return `${createLocationProxyScript(pageDomain, pageId)}${CUSTOM_SCRIPT}<style>${css}</style>`;
 }
 
 export function createAnalyticsMarkup(measurementId?: string) {
