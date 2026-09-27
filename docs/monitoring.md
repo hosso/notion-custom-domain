@@ -20,10 +20,13 @@ fails.
 
 ## Local Investigation
 
-Run the app locally against the same page:
+`npm run dev` reads the repository-root `.env` file. To run the app against the
+same page locally:
 
 ```sh
-PAGE_URL=https://<your-domain>.notion.site/<Your-Page-ID> npm run dev
+cp .env.example .env
+# Set PAGE_URL in .env, then:
+npm run dev
 ```
 
 Run the same smoke check locally against your local server:
@@ -39,7 +42,7 @@ captured HTML between environments first.
 
 1. Create a branch for the fix.
 2. Reproduce the issue locally if possible.
-3. Update `src/index.ts` or the monitor checks.
+3. Update the relevant module in `src/` or the monitor checks.
 4. Run:
 
 ```sh
