@@ -10,11 +10,11 @@
     "check": "npm run lint && npm run typecheck && npm test",
     "deploy": "npx --yes vercel@latest deploy",
     "deploy:prod": "npx --yes vercel@latest deploy --prod",
-    "dev": "node --watch --env-file-if-exists=.env src/index.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/index.ts",
     "fix": "biome check --write .",
     "lint": "biome check .",
     "monitor:smoke": "node scripts/smoke-monitor.mjs",
-    "test": "VERCEL_REGION=test node --test src/index.test.mjs",
+    "test": "VERCEL_REGION=test tsx --test src/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "vercel:build": "npx --yes vercel@latest build",
     "vercel:dev": "npx --yes vercel@latest dev"
@@ -22,6 +22,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
     "@types/node": "^24.19.0",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.3"
   },
   "engines": {

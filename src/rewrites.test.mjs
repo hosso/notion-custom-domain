@@ -3,12 +3,11 @@ import { once } from 'node:events';
 import test from 'node:test';
 import {
   addAnalyticsSourcesToCsp,
-  getRequestHostname,
-  isCacheableStaticAsset,
   RuntimeAssetTransform,
   rewriteCookieDomains,
   rewriteRuntimeAsset,
-} from './index.ts';
+  rewriteSharedResponseContent,
+} from './rewrites.ts';
 
 async function transformInChunks(input, splitAt) {
   const transform = new RuntimeAssetTransform();
@@ -51,6 +50,16 @@ test('runtime asset rewriting does not replace location assignments', async () =
   assert.equal(await transformInChunks(input, 25), expected);
 });
 
+test('shared response content rewrites AIF, Intercom, and Sentry', () => {
+  const input =
+    '"https://aif.notion.so/example"|"https://widget.intercom.io/widget"|Sentry.init({dsn:"https://example.com"})';
+
+  assert.equal(
+    rewriteSharedResponseContent(input),
+    '"/200/aif.notion.so/example"|"/200/widget.intercom.io/widget"|return;Sentry.init({dsn:"https://example.com"})',
+  );
+});
+
 test('cookie domains are rewritten for the custom host', () => {
   assert.deepEqual(
     rewriteCookieDomains(
@@ -62,24 +71,6 @@ test('cookie domains are rewritten for the custom host', () => {
     ),
     ['token=value; Domain=example.com; Path=/', 'other=value; Path=/'],
   );
-});
-
-test('request hostname excludes the local port used for cookie rewriting', () => {
-  assert.equal(
-    getRequestHostname({ headers: { host: 'preview.example.com:3200' } }),
-    'preview.example.com',
-  );
-  assert.equal(getRequestHostname({ headers: {} }), 'localhost');
-});
-
-test('only successful static assets are eligible for shared CDN caching', () => {
-  assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 200), true);
-  assert.equal(
-    isCacheableStaticAsset('/_assets/runtime.js?cache=1', 200),
-    true,
-  );
-  assert.equal(isCacheableStaticAsset('/_assets/runtime.js', 404), false);
-  assert.equal(isCacheableStaticAsset('/api/v3/loadPageChunk', 200), false);
 });
 
 test('analytics origins are added to script and connect CSP directives', () => {
