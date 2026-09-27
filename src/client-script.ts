@@ -26,6 +26,7 @@ const CUSTOM_SCRIPT = `<script>
     if (
       (domain.endsWith('notion.so') &&
         !domain.endsWith('msgstore.www.notion.so')) ||
+      domain === 'exp.notion.com' ||
       domain.endsWith('splunkcloud.com') ||
       domain.endsWith('statsigapi.net')
     ) {

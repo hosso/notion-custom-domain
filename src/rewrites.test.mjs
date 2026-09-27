@@ -98,4 +98,5 @@ test('injected browser scripts are self-contained', () => {
   assert.doesNotMatch(markup, /__name/);
   assert.match(markup, /window\.ncd/);
   assert.match(markup, /pageDomain.*example\.notion\.site/);
+  assert.match(markup, /exp\.notion\.com/);
 });

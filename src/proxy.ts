@@ -28,7 +28,7 @@ const JAVASCRIPT_ASSET_PATTERN = /^\/_assets\/[^/]+\.js(?:\?|$)/;
 const PASSTHROUGH_JAVASCRIPT_PATTERN =
   /^\/_assets\/localeSetup-[^/]+\.js(?:\?|$)/;
 const PUBLIC_PAGE_DATA_ENDPOINT = '/200/www.notion.so/api/v3/';
-const EXPERIMENT_ENDPOINT = '/200/exp.notion.so/v1/';
+const EXPERIMENT_ENDPOINT = '/200/exp.notion.com/v1/';
 const UPSTREAM_TIMEOUT_MS = 20_000;
 const STATIC_CACHE_CONTROL = 'public, max-age=31536000, immutable';
 const VERCEL_STATIC_CACHE_CONTROL =
@@ -86,13 +86,22 @@ function sendText(res: http.ServerResponse, statusCode: number, body: string) {
   res.end(body);
 }
 
+function sendJson(res: http.ServerResponse, body: object) {
+  res.statusCode = 200;
+  res.setHeader('content-type', 'application/json; charset=utf-8');
+  res.end(JSON.stringify(body));
+}
+
 function handlePseudoSuccessEndpoint(url: string, res: http.ServerResponse) {
   if (url.startsWith(PUBLIC_PAGE_DATA_ENDPOINT)) {
     sendText(res, 200, 'success');
   } else if (url.startsWith(EXPERIMENT_ENDPOINT)) {
-    res.statusCode = 200;
-    res.setHeader('content-type', 'application/json; charset=utf-8');
-    res.end(JSON.stringify({ success: true }));
+    sendJson(res, {
+      dynamic_configs: {},
+      feature_gates: {},
+      has_updates: false,
+      layer_configs: {},
+    });
   } else {
     res.statusCode = 200;
     res.end();
