@@ -5,7 +5,6 @@ import { pipeline, Transform } from 'node:stream';
 import { StringDecoder } from 'node:string_decoder';
 import { URL } from 'node:url';
 import { createGunzip, createGzip } from 'node:zlib';
-import express from 'express';
 
 const {
   PAGE_URL = 'https://notion.notion.site/Notion-Official-83715d7703ee4b8699b5e659a4712dd8',
@@ -176,12 +175,21 @@ export function isPseudoSuccessEndpoint(url: string) {
   return /^\/200\/?/.test(url);
 }
 
-function handlePseudoSuccessEndpoint(url: string, res: express.Response) {
+function sendText(res: http.ServerResponse, statusCode: number, body: string) {
+  res.statusCode = statusCode;
+  res.setHeader('content-type', 'text/plain; charset=utf-8');
+  res.end(body);
+}
+
+function handlePseudoSuccessEndpoint(url: string, res: http.ServerResponse) {
   if (url.startsWith(PUBLIC_PAGE_DATA_ENDPOINT)) {
-    res.send('success');
+    sendText(res, 200, 'success');
   } else if (url.startsWith(EXPERIMENT_ENDPOINT)) {
-    res.json({ success: true });
+    res.statusCode = 200;
+    res.setHeader('content-type', 'application/json; charset=utf-8');
+    res.end(JSON.stringify({ success: true }));
   } else {
+    res.statusCode = 200;
     res.end();
   }
 }
@@ -302,16 +310,32 @@ export class RuntimeAssetTransform extends Transform {
   }
 }
 
-function shouldRewriteHtml(req: express.Request) {
+function getRequestUrl(req: http.IncomingMessage) {
+  return req.url ?? '/';
+}
+
+export function getRequestHostname(req: http.IncomingMessage) {
+  const host = req.headers.host;
+  if (!host) return 'localhost';
+
+  try {
+    return new URL(`http://${host}`).hostname;
+  } catch {
+    return 'localhost';
+  }
+}
+
+function shouldRewriteHtml(req: http.IncomingMessage) {
+  const requestUrl = getRequestUrl(req);
   if (req.method !== 'GET' && req.method !== 'HEAD') return false;
   if (
-    STATIC_ASSET_PATTERN.test(req.url) ||
-    PASSTHROUGH_REQUEST_PATTERN.test(req.url)
+    STATIC_ASSET_PATTERN.test(requestUrl) ||
+    PASSTHROUGH_REQUEST_PATTERN.test(requestUrl)
   ) {
     return false;
   }
 
-  const pathname = new URL(req.url, 'http://localhost').pathname;
+  const pathname = new URL(requestUrl, 'http://localhost').pathname;
   return (
     req.headers.accept?.includes('text/html') ||
     pathname === '/' ||
@@ -321,7 +345,7 @@ function shouldRewriteHtml(req: express.Request) {
 
 function copyResponseHeaders(
   upstreamHeaders: http.IncomingHttpHeaders,
-  res: express.Response,
+  res: http.ServerResponse,
   hostname: string,
   requestUrl: string,
   statusCode: number,
@@ -371,13 +395,14 @@ function copyResponseHeaders(
   }
 }
 
-function proxyRequest(req: express.Request, res: express.Response) {
+function proxyRequest(req: http.IncomingMessage, res: http.ServerResponse) {
+  const requestUrl = getRequestUrl(req);
   const rewriteHtmlResponse = shouldRewriteHtml(req);
   const rewriteRuntimeResponse =
-    JAVASCRIPT_ASSET_PATTERN.test(req.url) &&
-    !PASSTHROUGH_JAVASCRIPT_PATTERN.test(req.url);
+    JAVASCRIPT_ASSET_PATTERN.test(requestUrl) &&
+    !PASSTHROUGH_JAVASCRIPT_PATTERN.test(requestUrl);
   const transformed = rewriteHtmlResponse || rewriteRuntimeResponse;
-  const target = new URL(getProxyPath(req.url), pageDomain);
+  const target = new URL(getProxyPath(requestUrl), pageDomain);
   const headers: http.OutgoingHttpHeaders = {
     ...req.headers,
     host: target.host,
@@ -407,8 +432,8 @@ function proxyRequest(req: express.Request, res: express.Response) {
       copyResponseHeaders(
         upstreamResponse.headers,
         res,
-        req.hostname,
-        req.url,
+        getRequestHostname(req),
+        requestUrl,
         res.statusCode,
         transformed,
       );
@@ -416,7 +441,7 @@ function proxyRequest(req: express.Request, res: express.Response) {
       const handleStreamError = (error: NodeJS.ErrnoException | null) => {
         if (!error) return;
         if (!res.headersSent) {
-          res.status(502).send('Bad Gateway');
+          sendText(res, 502, 'Bad Gateway');
         } else if (!res.destroyed) {
           res.destroy(error);
         }
@@ -434,7 +459,7 @@ function proxyRequest(req: express.Request, res: express.Response) {
         upstreamResponse.on('error', handleStreamError);
         upstreamResponse.on('end', () => {
           const html = Buffer.concat(chunks).toString();
-          res.send(rewriteSharedResponseContent(rewriteHtml(html)));
+          res.end(rewriteSharedResponseContent(rewriteHtml(html)));
         });
         return;
       }
@@ -462,7 +487,7 @@ function proxyRequest(req: express.Request, res: express.Response) {
           );
         } else {
           upstreamResponse.destroy();
-          res.status(502).send('Unsupported upstream content encoding');
+          sendText(res, 502, 'Unsupported upstream content encoding');
         }
       } else {
         res.flushHeaders();
@@ -476,7 +501,7 @@ function proxyRequest(req: express.Request, res: express.Response) {
   });
   upstreamRequest.on('error', (error) => {
     if (!res.headersSent) {
-      res.status(502).send('Bad Gateway');
+      sendText(res, 502, 'Bad Gateway');
     } else {
       res.destroy(error);
     }
@@ -485,23 +510,22 @@ function proxyRequest(req: express.Request, res: express.Response) {
   req.pipe(upstreamRequest);
 }
 
-const app = express();
-
-app.use((req, res, next) => {
-  if (isPseudoSuccessEndpoint(req.url)) {
-    handlePseudoSuccessEndpoint(req.url, res);
+export function handler(req: http.IncomingMessage, res: http.ServerResponse) {
+  const requestUrl = getRequestUrl(req);
+  if (isPseudoSuccessEndpoint(requestUrl)) {
+    handlePseudoSuccessEndpoint(requestUrl, res);
     return;
   }
-  next();
-});
-
-app.use(proxyRequest);
+  proxyRequest(req, res);
+}
 
 if (!process.env.VERCEL_REGION && !process.env.NOW_REGION) {
   const port = process.env.PORT || 3000;
-  app.listen(port, () =>
-    console.log(`Server running at http://localhost:${port}`),
-  );
+  http
+    .createServer(handler)
+    .listen(port, () =>
+      console.log(`Server running at http://localhost:${port}`),
+    );
 }
 
-export default app;
+export default handler;

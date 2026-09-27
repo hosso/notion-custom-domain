@@ -3,6 +3,7 @@ import { once } from 'node:events';
 import test from 'node:test';
 import {
   addAnalyticsSourcesToCsp,
+  getRequestHostname,
   isCacheableStaticAsset,
   RuntimeAssetTransform,
   rewriteCookieDomains,
@@ -61,6 +62,14 @@ test('cookie domains are rewritten for the custom host', () => {
     ),
     ['token=value; Domain=example.com; Path=/', 'other=value; Path=/'],
   );
+});
+
+test('request hostname excludes the local port used for cookie rewriting', () => {
+  assert.equal(
+    getRequestHostname({ headers: { host: 'preview.example.com:3200' } }),
+    'preview.example.com',
+  );
+  assert.equal(getRequestHostname({ headers: {} }), 'localhost');
 });
 
 test('only successful static assets are eligible for shared CDN caching', () => {

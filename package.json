@@ -19,12 +19,8 @@
     "vercel:build": "npx --yes vercel@latest build",
     "vercel:dev": "npx --yes vercel@latest dev"
   },
-  "dependencies": {
-    "express": "^5.2.1"
-  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.14",
-    "@types/express": "^5.0.6",
     "@types/node": "^24.19.0",
     "typescript": "~6.0.3"
   },
