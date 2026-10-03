@@ -27,12 +27,14 @@ test('runtime asset rewriting works across every chunk boundary', async () => {
     'before window.location.href after',
     'https://aif.notion.so/example',
     'https://widget.intercom.io/widget',
+    'https://transcend-cdn.com/cm/example/airgap.js',
     't.init({dsn:"https://example.com"})',
   ].join('|');
   const expected = [
     'before window.ncd.href() after',
     '/200/aif.notion.so/example',
     '/200/widget.intercom.io/widget',
+    '/200/transcend-cdn.com/cm/example/airgap.js',
     'return;t.init({dsn:"https://example.com"})',
   ].join('|');
 
@@ -51,13 +53,13 @@ test('runtime asset rewriting does not replace location assignments', async () =
   assert.equal(await transformInChunks(input, 25), expected);
 });
 
-test('shared response content rewrites AIF, Intercom, and Sentry', () => {
+test('shared response content rewrites AIF, Intercom, Transcend, and Sentry', () => {
   const input =
-    '"https://aif.notion.so/example"|"https://widget.intercom.io/widget"|Sentry.init({dsn:"https://example.com"})';
+    '"https://aif.notion.so/example"|"https://widget.intercom.io/widget"|"https://transcend-cdn.com/cm/example/airgap.js"|Sentry.init({dsn:"https://example.com"})';
 
   assert.equal(
     rewriteSharedResponseContent(input),
-    '"/200/aif.notion.so/example"|"/200/widget.intercom.io/widget"|return;Sentry.init({dsn:"https://example.com"})',
+    '"/200/aif.notion.so/example"|"/200/widget.intercom.io/widget"|"/200/transcend-cdn.com/cm/example/airgap.js"|return;Sentry.init({dsn:"https://example.com"})',
   );
 });
 

@@ -2,8 +2,9 @@
  * Design notes:
  * - Rewrites intentionally match exact strings in Notion's generated output;
  *   a Notion client change therefore requires corresponding test updates.
- * - AIF and Intercom are routed to `/200/`, while Sentry initialization is
- *   disabled. `proxy.ts` owns the matching local success responses.
+ * - AIF, Intercom, and Transcend are routed to `/200/`, while Sentry
+ *   initialization is disabled. `proxy.ts` owns the matching local success
+ *   responses.
  * - `window.location.href` reads are redirected through `window.ncd`; writes
  *   remain unchanged so Notion's own navigation behavior is preserved.
  * - Runtime assets are chunked streams. Retaining an unprocessed suffix makes
@@ -52,6 +53,7 @@ export function rewriteSharedResponseContent(data: string) {
   return data
     .replace(/https:\/\/(aif\.notion\.so\/?[^"`]*)/g, `/200/$1`)
     .replace(/https:\/\/(widget\.intercom\.io\/?[^"`]*)/g, `/200/$1`)
+    .replace(/https:\/\/(transcend-cdn\.com\/?[^"`]*)/g, `/200/$1`)
     .replace(/\w+\.init\({dsn:/, 'return;$&');
 }
 
@@ -65,6 +67,7 @@ export class RuntimeAssetTransform extends Transform {
     ['window.location.href', 'window.ncd.href()'],
     ['https://aif.notion.so', '/200/aif.notion.so'],
     ['https://widget.intercom.io', '/200/widget.intercom.io'],
+    ['https://transcend-cdn.com', '/200/transcend-cdn.com'],
     ['.init({dsn:', ''],
   ] as const;
 
